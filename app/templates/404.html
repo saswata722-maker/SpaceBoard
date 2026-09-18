@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block title %}404 — Page Not Found{% endblock %}
+
+{% block content %}
+<div class="text-center py-20">
+    <h1 class="text-6xl font-bold mb-4">404</h1>
+    <p class="text-xl text-gray-400 mb-8">This page drifted into deep space.</p>
+    <a href="{{ url_for('home.index') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-3 rounded-lg transition">
+        Return Home
+    </a>
+</div>
+{% endblock %}

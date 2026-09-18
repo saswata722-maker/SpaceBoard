@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Asteroids — NASA Explorer{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-bold mb-2">Asteroids</h1>
+    <p class="text-gray-400">Near-Earth Objects (NEOs) with hazard classification and close-approach data</p>
+</div>
+
+<!-- Filter Form -->
+<form method="GET" class="bg-space-800 rounded-xl p-6 mb-8 shadow-lg">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+        <div>
+            <label for="start_date" class="block text-sm font-medium text-gray-300 mb-1">Start Date</label>
+            <input type="date" id="start_date" name="start_date" value="{{ start_date }}"
+                   class="w-full bg-space-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+            <label for="end_date" class="block text-sm font-medium text-gray-300 mb-1">End Date</label>
+            <input type="date" id="end_date" name="end_date" value="{{ end_date }}"
+                   class="w-full bg-space-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="flex items-center gap-4">
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" name="hazardous" {% if hazardous_only %}checked{% endif %}
+                       class="w-4 h-4 rounded bg-space-700 border-gray-600 text-blue-500 focus:ring-blue-500">
+                <span class="text-sm text-gray-300">Hazardous only</span>
+            </label>
+            <button type="submit"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg transition">
+                Search
+            </button>
+        </div>
+    </div>
+</form>
+
+{% if error %}
+    <div class="bg-red-900/50 border border-red-500 text-red-200 rounded-lg p-6 text-center">
+        <p class="font-semibold mb-1">Data Unavailable</p>
+        <p class="text-sm">{{ error }}</p>
+    </div>
+{% elif neos %}
+    <p class="text-sm text-gray-400 mb-4">{{ element_count }} object(s) found in date range</p>
+    <div class="bg-space-800 rounded-xl overflow-hidden shadow-lg">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-space-700 text-gray-300">
+                    <tr>
+                        <th class="px-4 py-3 text-left">Name</th>
+                        <th class="px-4 py-3 text-left">Hazard Status</th>
+                        <th class="px-4 py-3 text-left">Diameter (km)</th>
+                        <th class="px-4 py-3 text-left">Close Approach</th>
+                        <th class="px-4 py-3 text-left">Miss Distance (km)</th>
+                        <th class="px-4 py-3 text-left">Velocity (km/h)</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-700">
+                    {% for neo in neos %}
+                    <tr class="hover:bg-space-700/50 transition">
+                        <td class="px-4 py-3 font-medium">{{ neo.name }}</td>
+                        <td class="px-4 py-3">
+                            {% if neo.is_potentially_hazardous_asteroid %}
+                                <span class="px-2 py-1 rounded-full text-xs font-semibold bg-amber-500 text-white">Potentially Hazardous</span>
+                            {% else %}
+                                <span class="px-2 py-1 rounded-full text-xs font-semibold bg-green-500 text-white">Safe</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3">
+                            {{ "%.2f"|format(neo.estimated_diameter.kilometers.estimated_diameter_min) }}–{{ "%.2f"|format(neo.estimated_diameter.kilometers.estimated_diameter_max) }}
+                        </td>
+                        <td class="px-4 py-3">{{ neo.close_approach_data[0].close_approach_date }}</td>
+                        <td class="px-4 py-3">{{ "{:,.0f}".format(neo.close_approach_data[0].miss_distance.kilometers|float) }}</td>
+                        <td class="px-4 py-3">{{ "{:,.0f}".format(neo.close_approach_data[0].relative_velocity.kilometers_per_hour|float) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% else %}
+    <div class="bg-space-800 rounded-lg p-6 text-center text-gray-400">
+        <p>No asteroids found for the selected criteria.</p>
+    </div>
+{% endif %}
+{% endblock %}

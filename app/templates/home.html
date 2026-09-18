@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Home — NASA Explorer{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-bold mb-2">Home</h1>
+    <p class="text-gray-400">NASA's Astronomy Picture of the Day</p>
+</div>
+
+{% if error %}
+    <div class="bg-red-900/50 border border-red-500 text-red-200 rounded-lg p-6 text-center">
+        <p class="font-semibold mb-1">Data Unavailable</p>
+        <p class="text-sm">{{ error }}</p>
+    </div>
+{% elif apod %}
+    <div class="bg-space-800 rounded-xl overflow-hidden shadow-lg">
+        {% if apod.media_type == 'image' %}
+            <img src="{{ apod.url }}" alt="{{ apod.title }}" class="w-full max-h-[500px] object-contain bg-black">
+        {% elif apod.media_type == 'video' %}
+            <div class="aspect-video">
+                <iframe src="{{ apod.url }}" class="w-full h-full" frameborder="0" allowfullscreen></iframe>
+            </div>
+        {% endif %}
+        <div class="p-6">
+            <div class="flex items-start justify-between mb-3">
+                <h2 class="text-xl font-bold">{{ apod.title }}</h2>
+                <span class="text-sm text-gray-400 whitespace-nowrap ml-4">{{ apod.date }}</span>
+            </div>
+            {% if apod.copyright %}
+                <p class="text-xs text-gray-500 mb-3">© {{ apod.copyright | trim }}</p>
+            {% endif %}
+            <p class="text-gray-300 leading-relaxed">{{ apod.explanation }}</p>
+        </div>
+    </div>
+{% else %}
+    <div class="bg-space-800 rounded-lg p-6 text-center text-gray-400">
+        <p>No APOD data available.</p>
+    </div>
+{% endif %}
+{% endblock %}
