@@ -16,6 +16,7 @@ instance/
 # Editor
 .vscode/
 .idea/
+.kilo/
 
 # OS
 .DS_Store
@@ -25,3 +26,12 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Local logs and one-off debug output (never commit)
+*.log
+import_trace.log
+
+# Local helper scripts — one-off generators/runners (never commit)
+run_sky_tests.py
+fix_*.py
+gen_*.py
