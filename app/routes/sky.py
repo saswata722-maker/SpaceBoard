@@ -26,7 +26,8 @@ def planet_positions():
 
     planets = []
     for b in bodies:
-        name = b.get("nameEnglish") or b.get("name", "").capitalize()
+        name_raw = b.get("nameEnglish") or (b.get("name") or "")
+        name = name_raw.capitalize() if name_raw else None
         if not name:
             continue
         # Orbital elements the client-side ephemeris needs (approx)
