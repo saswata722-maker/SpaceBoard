@@ -1,9 +1,8 @@
 from unittest.mock import MagicMock, patch
 
-import pytest
 from requests.exceptions import HTTPError, Timeout
 
-from app.api.solar_system import get_body, get_bodies
+from app.api.solar_system import get_body, get_bodies, get_planets
 
 
 def _mock_response(json_data, status_code=200):
@@ -74,6 +73,11 @@ SAMPLE_BODY_EARTH = {
     "moons": [{"moon": "Lune", "rel": ""}],
     "semimajorAxis": 149598023,
 }
+
+BUILTIN_PLANET_NAMES = (
+    "Mercury", "Venus", "Earth", "Mars", "Jupiter",
+    "Saturn", "Uranus", "Neptune", "Pluto",
+)
 
 
 @patch("app.api.solar_system.requests.get")
@@ -167,3 +171,71 @@ def test_get_body_timeout(mock_get):
 
     assert result["ok"] is False
     assert "timed out" in result["error"]
+
+
+# ---------------------------------------------------------------------------
+# get_planets(): UI wrapper with a built-in fallback
+# ---------------------------------------------------------------------------
+
+@patch("app.api.solar_system.requests.get")
+def test_get_planets_live_data_has_no_note(mock_get):
+    """When the upstream API answers, planets come straight from it and no
+    provenance note is needed."""
+    mock_get.return_value = _mock_response({"bodies": SAMPLE_BODIES})
+
+    app = _app()
+    with app.app_context():
+        from app.cache import cache
+
+        cache.clear()
+        result = get_planets()
+
+    assert result["ok"] is True
+    assert result["error"] is None
+    assert result["note"] is None
+    assert result["data"] == SAMPLE_BODIES
+
+
+@patch("app.api.solar_system.requests.get")
+def test_get_planets_falls_back_to_builtin_on_401(mock_get):
+    """The OpenData API now needs a bearer token; without one it 401s, so the
+    card grid must still get the nine built-in planets plus a provenance note."""
+    mock_get.return_value = _mock_response({}, status_code=401)
+
+    app = _app()
+    with app.app_context():
+        from app.cache import cache
+
+        cache.clear()
+        result = get_planets()
+
+    assert result["ok"] is True
+    assert result["error"] is None
+    assert result["note"] is not None
+    names = [b["nameEnglish"] for b in result["data"]]
+    for want in BUILTIN_PLANET_NAMES:
+        assert want in names
+
+
+@patch("app.api.solar_system.requests.get")
+def test_get_planets_builtin_shape_matches_template(mock_get):
+    """Every fallback planet carries the fields planets.html dereferences and an
+    English name the tonight script can map to an astronomy-engine Body."""
+    mock_get.side_effect = Timeout("Connection timed out")
+
+    app = _app()
+    with app.app_context():
+        from app.cache import cache
+
+        cache.clear()
+        result = get_planets()
+
+    assert len(result["data"]) == len(BUILTIN_PLANET_NAMES)
+    for body in result["data"]:
+        assert body["nameEnglish"]
+        assert body["massMassValue"] is not None
+        assert body["massExp"] is not None
+        assert body["radiusMean"] is not None
+        assert body["gravity"] is not None
+        assert body["orbitalPeriod"] is not None
+        assert isinstance(body["moons"], list)
