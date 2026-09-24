@@ -1,3 +1,4 @@
+import re
 from unittest.mock import patch
 
 import pytest
@@ -153,10 +154,10 @@ def test_404_route(client):
     assert b"deep space" in response.data
 
 
-@patch("app.routes.planets.get_bodies")
+@patch("app.routes.planets.get_planets")
 @patch("app.routes.planets.get_exoplanets")
-def test_planets_route_success(mock_get_exoplanets, mock_get_bodies, client):
-    mock_get_bodies.return_value = {
+def test_planets_route_success(mock_get_exoplanets, mock_get_planets, client):
+    mock_get_planets.return_value = {
         "ok": True,
         "data": [
             {
@@ -171,6 +172,7 @@ def test_planets_route_success(mock_get_exoplanets, mock_get_bodies, client):
             }
         ],
         "error": None,
+        "note": None,
     }
     mock_get_exoplanets.return_value = {
         "ok": True,
@@ -186,10 +188,10 @@ def test_planets_route_success(mock_get_exoplanets, mock_get_bodies, client):
     assert b"Kepler-22 b" in response.data
 
 
-@patch("app.routes.planets.get_bodies")
+@patch("app.routes.planets.get_planets")
 @patch("app.routes.planets.get_exoplanets")
-def test_planets_route_search(mock_get_exoplanets, mock_get_bodies, client):
-    mock_get_bodies.return_value = {"ok": True, "data": [], "error": None}
+def test_planets_route_search(mock_get_exoplanets, mock_get_planets, client):
+    mock_get_planets.return_value = {"ok": True, "data": [], "error": None, "note": None}
     mock_get_exoplanets.return_value = {
         "ok": True,
         "data": [{"pl_name": "TRAPPIST-1e", "hostname": "TRAPPIST-1",
@@ -203,18 +205,25 @@ def test_planets_route_search(mock_get_exoplanets, mock_get_bodies, client):
     assert b"TRAPPIST-1e" in response.data
 
 
-@patch("app.routes.planets.get_bodies")
+@patch("app.routes.planets.get_planets")
 @patch("app.routes.planets.get_exoplanets")
-def test_planets_route_api_error(mock_get_exoplanets, mock_get_bodies, client):
-    mock_get_bodies.return_value = {
-        "ok": False, "data": None, "error": "API unreachable."
+def test_planets_route_api_error(mock_get_exoplanets, mock_get_planets, client):
+    """The planets page never 500s: the solar section falls back to built-in
+    data and shows a note, while exoplanet failures still show the old
+    'Data Unavailable' block."""
+    mock_get_planets.return_value = {
+        "ok": True,
+        "data": [],
+        "error": None,
+        "note": "Live solar system data is unavailable. Showing built-in planet data.",
     }
     mock_get_exoplanets.return_value = {
         "ok": False, "data": None, "error": "Archive timeout."
     }
     response = client.get("/planets/")
     assert response.status_code == 200
-    assert response.data.count(b"Data Unavailable") >= 2
+    assert b"built-in planet data" in response.data
+    assert b"Data Unavailable" in response.data
 
 
 @patch("app.routes.stars.get_apod")
@@ -242,3 +251,107 @@ def test_stars_route_empty(mock_get_apod, client):
     response = client.get("/stars/")
     assert response.status_code == 200
     assert b"No recent imagery" in response.data
+
+
+# ---------------------------------------------------------------------------
+# "Where to find this planet tonight" (client-side astronomy-engine block)
+# ---------------------------------------------------------------------------
+
+TONIGHT_SCRIPT = "js/planet-tonight.js"
+
+
+@patch("app.routes.planets.get_exoplanets")
+@patch("app.routes.planets.get_planets")
+def test_planets_route_tonight_block_markup(mock_get_planets, mock_get_exoplanets, client):
+    """Every solar-system card with an English name carries the data attribute
+    the script reads, and the page loads the script."""
+    mock_get_planets.return_value = {
+        "ok": True,
+        "data": [
+            {
+                "nameEnglish": "Mars",
+                "name": "Mars",
+                "massMassValue": 6.39,
+                "massExp": 23,
+                "radiusMean": 3389.5,
+                "gravity": 3.71,
+                "orbitalPeriod": 687.0,
+                "moons": [],
+            }
+        ],
+        "error": None,
+        "note": None,
+    }
+    mock_get_exoplanets.return_value = {"ok": True, "data": [], "error": None}
+
+    response = client.get("/planets/")
+    assert response.status_code == 200
+    html = response.data
+    assert b'data-planet="Mars"' in html
+    assert b"planet-tonight" in html
+    assert TONIGHT_SCRIPT.encode() in html
+
+
+@patch("app.routes.planets.get_exoplanets")
+@patch("app.routes.planets.get_planets")
+def test_planets_route_tonight_block_skipped_without_english_name(
+        mock_get_planets, mock_get_exoplanets, client):
+    """A body without nameEnglish cannot be mapped to an engine Body, so no
+    tonight block is emitted for it."""
+    mock_get_planets.return_value = {
+        "ok": True,
+        "data": [{
+            "nameEnglish": None,
+            "name": "Terre",
+            "massMassValue": 5.97,
+            "massExp": 24,
+            "radiusMean": 6371.0,
+            "gravity": 9.81,
+            "orbitalPeriod": 365.25,
+            "moons": [],
+        }],
+        "error": None,
+        "note": None,
+    }
+    mock_get_exoplanets.return_value = {"ok": True, "data": [], "error": None}
+
+    html = client.get("/planets/").data
+    assert b"data-planet" not in html
+
+
+@patch("app.routes.planets.get_exoplanets")
+@patch("app.routes.planets.get_planets")
+def test_planets_route_engine_url_is_loadable(
+        mock_get_planets, mock_get_exoplanets, client):
+    """Regression guard: cdn.jsdelivr.net/npm/astronomy-engine has no dist/
+    directory and version 2.1.10 was never published, so the old URL 404'd and
+    the feature failed silently."""
+    mock_get_planets.return_value = {"ok": True, "data": [], "error": None, "note": None}
+    mock_get_exoplanets.return_value = {"ok": True, "data": [], "error": None}
+
+    html = client.get("/planets/").data.decode()
+    assert "astronomy-engine@" in html
+    assert "/dist/" not in html
+
+    match = re.search(r"astronomy-engine@(\d+\.\d+\.\d+)/([\w.]+)\.js", html)
+    assert match, "engine script URL must pin a version and a real file name"
+    assert match.group(2) == "astronomy.browser.min"
+
+
+def test_planet_tonight_script_served_and_uses_verified_api(client):
+    """The script is served, reads the card attribute, and uses the
+    astronomy-engine calls that were verified against the library source
+    (Equator/Horizon/Constellation/SearchRiseSet) - not the non-existent
+    Epoch/Epicycle/JulianDate.fromDate calls the sky map originally used."""
+    response = client.get("/static/js/planet-tonight.js")
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
+
+    assert "data-planet" in body
+    for call in ("Astronomy.Equator(", "Astronomy.Horizon(",
+                 "Astronomy.Constellation(", "Astronomy.SearchRiseSet(",
+                 "Astronomy.MakeTime("):
+        assert call in body, f"expected {call} in planet-tonight.js"
+
+    for broken in ("Astronomy.Epoch", "Astronomy.Epicycle", "JulianDate.fromDate"):
+        assert broken not in body, f"{broken} does not exist in astronomy-engine"

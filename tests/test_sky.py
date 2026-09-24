@@ -17,7 +17,7 @@ def client():
 # Sky map route
 # ---------------------------------------------------------------------------
 
-@patch("app.routes.sky.get_bodies")
+@patch("app.routes.sky.get_planets")
 def test_sky_map_route_success(mock_get_bodies, client):
     """The /sky/ route should render the planisphere page with the canvas."""
     mock_get_bodies.return_value = {"ok": True, "data": [], "error": None}
@@ -29,7 +29,7 @@ def test_sky_map_route_success(mock_get_bodies, client):
     assert b"latitude" in html.lower() or b"Latitude" in html
 
 
-@patch("app.routes.sky.get_bodies")
+@patch("app.routes.sky.get_planets")
 def test_sky_map_route_has_planet_api_endpoint(mock_get_bodies, client):
     """The planet-positions JSON endpoint is reachable from /sky/."""
     mock_get_bodies.return_value = {"ok": True, "data": [], "error": None}
@@ -41,7 +41,7 @@ def test_sky_map_route_has_planet_api_endpoint(mock_get_bodies, client):
 # /sky/api/planet-positions
 # ---------------------------------------------------------------------------
 
-@patch("app.routes.sky.get_bodies")
+@patch("app.routes.sky.get_planets")
 def test_planet_positions_api_success(mock_get_bodies, client):
     """Successful response returns ok=True and a planets list with correct
     field names the sky map JS consumes."""
@@ -117,7 +117,7 @@ def test_planet_positions_api_success(mock_get_bodies, client):
     assert mars["radius_km"] == pytest.approx(3389.5)
 
 
-@patch("app.routes.sky.get_bodies")
+@patch("app.routes.sky.get_planets")
 def test_planet_positions_api_success_name_fallback(mock_get_bodies, client):
     """When nameEnglish is missing the route falls back to a capitalized name."""
     mock_get_bodies.return_value = {
@@ -151,7 +151,7 @@ def test_planet_positions_api_success_name_fallback(mock_get_bodies, client):
     assert p["name"] == "Mercure"
 
 
-@patch("app.routes.sky.get_bodies")
+@patch("app.routes.sky.get_planets")
 def test_planet_positions_api_missing_name_skipped(mock_get_bodies, client):
     """Bodies without a name (nameEnglish or name) are excluded from the
     response."""
@@ -185,7 +185,7 @@ def test_planet_positions_api_missing_name_skipped(mock_get_bodies, client):
     assert data["planets"] == []
 
 
-@patch("app.routes.sky.get_bodies")
+@patch("app.routes.sky.get_planets")
 def test_planet_positions_api_error(mock_get_bodies, client):
     """When the solar-system API fails the endpoint returns ok=False and 500."""
     mock_get_bodies.return_value = {
@@ -204,7 +204,7 @@ def test_planet_positions_api_error(mock_get_bodies, client):
     assert "planets" not in data
 
 
-@patch("app.routes.sky.get_bodies")
+@patch("app.routes.sky.get_planets")
 def test_planet_positions_memoized(mock_get_bodies, client):
     """The planet-positions endpoint is memoized (60 s): two identical requests
     hit the upstream API only once and return identical payloads."""
