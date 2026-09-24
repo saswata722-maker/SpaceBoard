@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, jsonify
 import json
 from datetime import datetime, timezone
 
-from app.api.solar_system import get_bodies
+from app.api.solar_system import get_planets
 from app.cache import cache
 
 
@@ -19,7 +19,7 @@ def index():
 @cache.memoize(timeout=60)
 def planet_positions():
     """Return solar system planet data for the sky map's planet layer."""
-    result = get_bodies(is_planet=True)
+    result = get_planets()
     if not result["ok"]:
         return jsonify({"ok": False, "error": result["error"]}), 500
     bodies = result["data"]

@@ -10,12 +10,12 @@
 
 <section class="mb-12">
     <h2 class="text-2xl font-semibold mb-4">Solar System</h2>
-    {% if ss_error %}
-        <div class="bg-red-900/50 border border-red-500 text-red-200 rounded-lg p-6 text-center mb-4">
-            <p class="font-semibold mb-1">Data Unavailable</p>
-            <p class="text-sm">{{ ss_error }}</p>
+    {% if ss_note %}
+        <div class="bg-amber-900/40 border border-amber-600 text-amber-100 rounded-lg p-4 mb-4 text-sm">
+            {{ ss_note }}
         </div>
-    {% elif solar_planets %}
+    {% endif %}
+    {% if solar_planets %}
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {% for planet in solar_planets %}
             <div class="bg-space-800 rounded-xl p-5 shadow-lg hover:bg-space-700 transition">
@@ -42,6 +42,10 @@
                         <div class="flex justify-between"><dt class="text-gray-400">Discovered By</dt><dd>{{ planet.discoveredBy }}</dd></div>
                     {% endif %}
                 </dl>
+                {% if planet.nameEnglish %}
+                <div class="planet-tonight mt-4 pt-3 border-t border-gray-700 text-sm text-gray-400"
+                     data-planet="{{ planet.nameEnglish }}">Calculating tonight&rsquo;s position&hellip;</div>
+                {% endif %}
             </div>
             {% endfor %}
         </div>
@@ -108,4 +112,9 @@
         </div>
     {% endif %}
 </section>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js"></script>
+<script src="{{ url_for('static', filename='js/planet-tonight.js') }}"></script>
 {% endblock %}
