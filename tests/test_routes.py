@@ -370,3 +370,40 @@ def test_planet_tonight_script_served_and_uses_verified_api(client):
 
     for broken in ("Astronomy.Epoch", "Astronomy.Epicycle", "JulianDate.fromDate"):
         assert broken not in body, f"{broken} does not exist in astronomy-engine"
+
+
+@patch("app.routes.home.get_apod")
+def test_home_page_declares_an_inline_favicon(mock_get_apod, client):
+    """A declared inline icon keeps the browser from requesting /favicon.ico,
+    which otherwise 404s (the old blueprint route lived at
+    /stars/favicon.ico because of its url_prefix, so it never helped)."""
+    mock_get_apod.return_value = {
+        "ok": False, "data": None, "error": "mocked outage"
+    }
+
+    response = client.get("/")
+    assert response.status_code == 200
+    html = response.data.decode()
+    assert 'rel="icon"' in html
+    assert "data:image/svg+xml" in html
+
+
+def test_root_favicon_is_served(client):
+    """Browsers also probe /favicon.ico directly; it must not 404."""
+    response = client.get("/favicon.ico")
+    assert response.status_code == 200
+    assert response.headers["Content-Type"].startswith("image/svg+xml")
+    assert b"<svg" in response.data
+
+
+@patch("app.routes.planets.get_exoplanets")
+@patch("app.routes.planets.get_planets")
+def test_planets_and_sky_pages_declare_an_inline_favicon(
+        mock_get_planets, mock_get_exoplanets, client):
+    mock_get_planets.return_value = {"ok": True, "data": [], "error": None, "note": None}
+    mock_get_exoplanets.return_value = {"ok": True, "data": [], "error": None}
+
+    for path in ("/sky/", "/planets/"):
+        html = client.get(path).data.decode()
+        assert 'rel="icon"' in html, f"{path} does not declare a favicon"
+        assert "data:image/svg+xml" in html, f"{path} favicon is not inline"
