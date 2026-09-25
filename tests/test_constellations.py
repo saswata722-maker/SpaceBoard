@@ -7,6 +7,7 @@ These guard the two failure modes that made the sky map unusable before:
 import json
 import os
 import re
+from collections import Counter
 
 import pytest
 
@@ -119,3 +120,34 @@ def test_sky_js_loads_constellation_and_star_data(sky_js):
 def test_sky_html_has_constellation_toggle(sky_html):
     assert 'id="show-constellations"' in sky_html
     assert "Constellation lines" in sky_html
+
+
+def test_sky_js_draws_constellation_labels(sky_js):
+    """Lines alone do not tell you what you are looking at; the map also needs
+    to name the constellation near each stick figure."""
+    assert "drawConstellationLabels" in sky_js
+    assert "constellationLabelPoint" in sky_js
+    assert "drawStars(size.w, size.h)" in sky_js
+
+
+def test_star_catalog_has_no_duplicate_positions():
+    """The catalog shipped with 36 duplicate (ra, dec) pairs, so those stars
+    were drawn twice (too bright) and both copies were clickable."""
+    with open(STAR_PATH, encoding="utf-8") as handle:
+        stars = json.load(handle)
+
+    keys = [(star["ra"], star["dec"]) for star in stars]
+    duplicates = [key for key, count in Counter(keys).items() if count > 1]
+    assert not duplicates, f"duplicate star positions: {duplicates[:5]}"
+
+
+def test_star_catalog_named_stars_are_unique():
+    """Dedupe must keep every named star — they are what the labels and hover
+    tooltips show — without leaving a name on two records."""
+    with open(STAR_PATH, encoding="utf-8") as handle:
+        stars = json.load(handle)
+
+    names = [star["name"] for star in stars if star.get("name")]
+    duplicates = [name for name, count in Counter(names).items() if count > 1]
+    assert not duplicates, f"duplicate star names: {duplicates}"
+    assert len(names) >= 20, "too few named stars survived for useful labels"

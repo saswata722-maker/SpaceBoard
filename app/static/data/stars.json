@@ -405,15 +405,6 @@
   "desig": null
  },
  {
-  "ra": 344.4107,
-  "dec": -29.6708,
-  "mag": 3.56,
-  "name": null,
-  "spclass": null,
-  "constellation": null,
-  "desig": null
- },
- {
   "ra": 275.6929,
   "dec": 2.4415,
   "mag": 3.01,
@@ -1863,15 +1854,6 @@
   "desig": null
  },
  {
-  "ra": 96.47360000000003,
-  "dec": 16.5092,
-  "mag": 4.13,
-  "name": null,
-  "spclass": null,
-  "constellation": null,
-  "desig": null
- },
- {
   "ra": 177.00829999999996,
   "dec": 47.7844,
   "mag": 4.5,
@@ -1892,11 +1874,11 @@
  {
   "ra": 310.3583,
   "dec": 45.2803,
-  "mag": 4.05,
-  "name": null,
-  "spclass": null,
-  "constellation": null,
-  "desig": null
+  "mag": 1.25,
+  "name": "Deneb",
+  "spclass": "A2Ia",
+  "constellation": "Cygnus",
+  "desig": "alpha Cyg"
  },
  {
   "ra": 118.2814,
@@ -2370,15 +2352,6 @@
   "ra": 82.0434,
   "dec": -24.9119,
   "mag": 0.82,
-  "name": null,
-  "spclass": null,
-  "constellation": null,
-  "desig": null
- },
- {
-  "ra": 122.7955,
-  "dec": 31.8883,
-  "mag": 3.68,
   "name": null,
   "spclass": null,
   "constellation": null,
@@ -2862,15 +2835,6 @@
   "desig": null
  },
  {
-  "ra": 310.3583,
-  "dec": 45.2803,
-  "mag": 1.25,
-  "name": "Deneb",
-  "spclass": "A2Ia",
-  "constellation": "Cygnus",
-  "desig": "alpha Cyg"
- },
- {
   "ra": 170.347,
   "dec": 53.3562,
   "mag": 3.68,
@@ -3103,15 +3067,6 @@
   "spclass": null,
   "constellation": null,
   "desig": null
- },
- {
-  "ra": 212.7955,
-  "dec": 31.8883,
-  "mag": 1.58,
-  "name": "Castor",
-  "spclass": "A1V",
-  "constellation": "Gemini",
-  "desig": "alpha Gem"
  },
  {
   "ra": 298.88890000000004,
@@ -3753,15 +3708,6 @@
   "desig": null
  },
  {
-  "ra": 29.41070000000002,
-  "dec": -29.6708,
-  "mag": 1.11,
-  "name": null,
-  "spclass": null,
-  "constellation": null,
-  "desig": null
- },
- {
   "ra": 114.8053,
   "dec": 11.2935,
   "mag": 3.19,
@@ -3783,15 +3729,6 @@
   "ra": 176.4968,
   "dec": 55.0249,
   "mag": 0.79,
-  "name": null,
-  "spclass": null,
-  "constellation": null,
-  "desig": null
- },
- {
-  "ra": 77.7955,
-  "dec": 31.8883,
-  "mag": 3.33,
   "name": null,
   "spclass": null,
   "constellation": null,
@@ -3836,11 +3773,11 @@
  {
   "ra": 296.3528,
   "dec": 8.8683,
-  "mag": 3.3,
-  "name": null,
-  "spclass": null,
-  "constellation": null,
-  "desig": null
+  "mag": 0.5,
+  "name": "Altair",
+  "spclass": "A7V",
+  "constellation": "Aquila",
+  "desig": "alpha Aql"
  },
  {
   "ra": 97.8174,
@@ -4014,15 +3951,6 @@
   "desig": null
  },
  {
-  "ra": 32.795500000000004,
-  "dec": 31.8883,
-  "mag": 2.98,
-  "name": null,
-  "spclass": null,
-  "constellation": null,
-  "desig": null
- },
- {
   "ra": 312.00829999999996,
   "dec": 47.7844,
   "mag": 2.97,
@@ -4053,15 +3981,6 @@
   "ra": 142.918,
   "dec": -0.529,
   "mag": 4.25,
-  "name": null,
-  "spclass": null,
-  "constellation": null,
-  "desig": null
- },
- {
-  "ra": 119.41070000000002,
-  "dec": -29.6708,
-  "mag": 1.81,
   "name": null,
   "spclass": null,
   "constellation": null,
@@ -4338,15 +4257,6 @@
   "desig": null
  },
  {
-  "ra": 49.3132,
-  "dec": 56.5372,
-  "mag": 0.5,
-  "name": "Procyon",
-  "spclass": "F5IV-V",
-  "constellation": "Canis Minor",
-  "desig": "alpha CMi"
- },
- {
   "ra": 131.679,
   "dec": 35.5465,
   "mag": 0.56,
@@ -4500,15 +4410,6 @@
   "desig": null
  },
  {
-  "ra": 347.7955,
-  "dec": 31.8883,
-  "mag": 2.63,
-  "name": null,
-  "spclass": null,
-  "constellation": null,
-  "desig": null
- },
- {
   "ra": 208.6466,
   "dec": 27.6921,
   "mag": 0.86,
@@ -4606,15 +4507,6 @@
   "spclass": null,
   "constellation": null,
   "desig": null
- },
- {
-  "ra": 296.3528,
-  "dec": 8.8683,
-  "mag": 0.5,
-  "name": "Altair",
-  "spclass": "A7V",
-  "constellation": "Aquila",
-  "desig": "alpha Aql"
  },
  {
   "ra": 164.41070000000002,
@@ -4761,15 +4653,6 @@
   "desig": null
  },
  {
-  "ra": 96.0,
-  "dec": 56.5372,
-  "mag": 0.5,
-  "name": "Capella",
-  "spclass": "G3III",
-  "constellation": "Auriga",
-  "desig": "alpha Aur"
- },
- {
   "ra": 157.4901,
   "dec": 63.2306,
   "mag": 1.39,
@@ -4881,24 +4764,6 @@
   "ra": 251.8922,
   "dec": 59.1489,
   "mag": 2.59,
-  "name": null,
-  "spclass": null,
-  "constellation": null,
-  "desig": null
- },
- {
-  "ra": 96.0,
-  "dec": 56.5372,
-  "mag": 3.3,
-  "name": null,
-  "spclass": null,
-  "constellation": null,
-  "desig": null
- },
- {
-  "ra": 302.7955,
-  "dec": 31.8883,
-  "mag": 2.28,
   "name": null,
   "spclass": null,
   "constellation": null,
@@ -5454,15 +5319,6 @@
   "desig": null
  },
  {
-  "ra": 254.41070000000002,
-  "dec": -29.6708,
-  "mag": 2.86,
-  "name": null,
-  "spclass": null,
-  "constellation": null,
-  "desig": null
- },
- {
   "ra": 283.2461,
   "dec": -30.8547,
   "mag": 1.0,
@@ -5672,11 +5528,11 @@
  {
   "ra": 160.2056,
   "dec": 54.75,
-  "mag": 4.5,
-  "name": null,
-  "spclass": null,
-  "constellation": null,
-  "desig": null
+  "mag": 2.47,
+  "name": "Ruchbah",
+  "spclass": "A5IV",
+  "constellation": "Cassiopeia",
+  "desig": "delta Cas"
  },
  {
   "ra": 89.9303,
@@ -5850,27 +5706,9 @@
   "desig": null
  },
  {
-  "ra": 141.4736,
-  "dec": 16.5092,
-  "mag": 1.68,
-  "name": null,
-  "spclass": null,
-  "constellation": null,
-  "desig": null
- },
- {
   "ra": 260.6989,
   "dec": 0.0909,
   "mag": 4.4,
-  "name": null,
-  "spclass": null,
-  "constellation": null,
-  "desig": null
- },
- {
-  "ra": 344.4107,
-  "dec": -29.6708,
-  "mag": 3.56,
   "name": null,
   "spclass": null,
   "constellation": null,
@@ -6095,20 +5933,11 @@
  {
   "ra": 76.2353,
   "dec": 45.9883,
-  "mag": 2.75,
-  "name": null,
-  "spclass": null,
-  "constellation": null,
-  "desig": null
- },
- {
-  "ra": 74.41070000000002,
-  "dec": -29.6708,
-  "mag": 1.46,
-  "name": null,
-  "spclass": null,
-  "constellation": null,
-  "desig": null
+  "mag": -0.05,
+  "name": "Capella",
+  "spclass": "G3III",
+  "constellation": "Auriga",
+  "desig": "alpha Aur"
  },
  {
   "ra": 253.0755,
@@ -6330,15 +6159,6 @@
   "ra": 181.7201,
   "dec": 41.3867,
   "mag": 2.69,
-  "name": null,
-  "spclass": null,
-  "constellation": null,
-  "desig": null
- },
- {
-  "ra": 164.41070000000002,
-  "dec": -29.6708,
-  "mag": 2.16,
   "name": null,
   "spclass": null,
   "constellation": null,
@@ -6573,15 +6393,6 @@
   "ra": 165.93330000000003,
   "dec": 56.3833,
   "mag": 4.5,
-  "name": null,
-  "spclass": null,
-  "constellation": null,
-  "desig": null
- },
- {
-  "ra": 231.4736,
-  "dec": 16.5092,
-  "mag": 2.38,
   "name": null,
   "spclass": null,
   "constellation": null,
@@ -6840,15 +6651,6 @@
   "desig": null
  },
  {
-  "ra": 6.473600000000033,
-  "dec": 16.5092,
-  "mag": 3.43,
-  "name": null,
-  "spclass": null,
-  "constellation": null,
-  "desig": null
- },
- {
   "ra": 53.6031,
   "dec": -38.0345,
   "mag": 2.61,
@@ -6892,15 +6694,6 @@
   "spclass": "F5IV-V",
   "constellation": "Canis Minor",
   "desig": "alpha CMi"
- },
- {
-  "ra": 344.4107,
-  "dec": -29.6708,
-  "mag": 0.76,
-  "name": "Fomalhaut",
-  "spclass": "A3V",
-  "constellation": "Piscis Austrinus",
-  "desig": "alpha PsA"
  },
  {
   "ra": 251.9041,
@@ -6975,15 +6768,6 @@
   "desig": null
  },
  {
-  "ra": 76.2353,
-  "dec": 45.9883,
-  "mag": -0.05,
-  "name": "Capella",
-  "spclass": "G3III",
-  "constellation": "Auriga",
-  "desig": "alpha Aur"
- },
- {
   "ra": 79.7747,
   "dec": 22.5553,
   "mag": 1.72,
@@ -7032,15 +6816,6 @@
   "ra": 181.532,
   "dec": 31.925,
   "mag": 1.62,
-  "name": null,
-  "spclass": null,
-  "constellation": null,
-  "desig": null
- },
- {
-  "ra": 299.4107,
-  "dec": -29.6708,
-  "mag": 3.21,
   "name": null,
   "spclass": null,
   "constellation": null,
@@ -7182,15 +6957,6 @@
   "desig": null
  },
  {
-  "ra": 355.5167,
-  "dec": -57.2394,
-  "mag": 3.3,
-  "name": null,
-  "spclass": null,
-  "constellation": null,
-  "desig": null
- },
- {
   "ra": 68.5734,
   "dec": -27.5858,
   "mag": 3.19,
@@ -7326,15 +7092,6 @@
   "desig": null
  },
  {
-  "ra": 96.4736,
-  "dec": 16.5092,
-  "mag": 1.33,
-  "name": "Alcyone",
-  "spclass": "B7III",
-  "constellation": "Taurus",
-  "desig": "eta Tau"
- },
- {
   "ra": 217.0519,
   "dec": 48.3519,
   "mag": 1.25,
@@ -7365,15 +7122,6 @@
   "ra": 305.2322,
   "dec": 17.9069,
   "mag": 3.93,
-  "name": null,
-  "spclass": null,
-  "constellation": null,
-  "desig": null
- },
- {
-  "ra": 206.8922,
-  "dec": 59.1489,
-  "mag": 4.5,
   "name": null,
   "spclass": null,
   "constellation": null,
@@ -7419,15 +7167,6 @@
   "ra": 117.3546,
   "dec": -4.8702,
   "mag": 1.55,
-  "name": null,
-  "spclass": null,
-  "constellation": null,
-  "desig": null
- },
- {
-  "ra": 186.4736,
-  "dec": 16.5092,
-  "mag": 2.03,
   "name": null,
   "spclass": null,
   "constellation": null,
@@ -7851,15 +7590,6 @@
   "ra": 207.2733,
   "dec": 8.4415,
   "mag": 3.34,
-  "name": null,
-  "spclass": null,
-  "constellation": null,
-  "desig": null
- },
- {
-  "ra": 209.41070000000002,
-  "dec": -29.6708,
-  "mag": 2.51,
   "name": null,
   "spclass": null,
   "constellation": null,
@@ -8343,15 +8073,6 @@
   "desig": null
  },
  {
-  "ra": 276.47360000000003,
-  "dec": 16.5092,
-  "mag": 2.73,
-  "name": null,
-  "spclass": null,
-  "constellation": null,
-  "desig": null
- },
- {
   "ra": 179.3756,
   "dec": 1.6876,
   "mag": 2.5,
@@ -8472,24 +8193,6 @@
   "ra": 245.0617,
   "dec": -69.5306,
   "mag": 4.29,
-  "name": null,
-  "spclass": null,
-  "constellation": null,
-  "desig": null
- },
- {
-  "ra": 51.47360000000003,
-  "dec": 16.5092,
-  "mag": 3.78,
-  "name": null,
-  "spclass": null,
-  "constellation": null,
-  "desig": null
- },
- {
-  "ra": 96.0,
-  "dec": 7.4072,
-  "mag": 2.75,
   "name": null,
   "spclass": null,
   "constellation": null,
@@ -8667,15 +8370,6 @@
   "desig": null
  },
  {
-  "ra": 321.47360000000003,
-  "dec": 16.5092,
-  "mag": 3.08,
-  "name": null,
-  "spclass": null,
-  "constellation": null,
-  "desig": null
- },
- {
   "ra": 27.3587,
   "dec": 22.4098,
   "mag": 3.01,
@@ -8811,27 +8505,9 @@
   "desig": null
  },
  {
-  "ra": 212.79549999999995,
-  "dec": 31.8883,
-  "mag": 4.38,
-  "name": null,
-  "spclass": null,
-  "constellation": null,
-  "desig": null
- },
- {
   "ra": 196.0077,
   "dec": 72.879,
   "mag": 1.93,
-  "name": null,
-  "spclass": null,
-  "constellation": null,
-  "desig": null
- },
- {
-  "ra": 167.79549999999995,
-  "dec": 31.8883,
-  "mag": 4.03,
   "name": null,
   "spclass": null,
   "constellation": null,
@@ -9036,15 +8712,6 @@
   "desig": null
  },
  {
-  "ra": 160.2056,
-  "dec": 54.75,
-  "mag": 2.47,
-  "name": "Ruchbah",
-  "spclass": "A5IV",
-  "constellation": "Cassiopeia",
-  "desig": "delta Cas"
- },
- {
   "ra": 103.7584,
   "dec": 62.9219,
   "mag": 3.75,
@@ -9219,15 +8886,6 @@
   "ra": 105.6393,
   "dec": -65.8374,
   "mag": 1.3,
-  "name": null,
-  "spclass": null,
-  "constellation": null,
-  "desig": null
- },
- {
-  "ra": 257.7955,
-  "dec": 31.8883,
-  "mag": 1.93,
   "name": null,
   "spclass": null,
   "constellation": null,

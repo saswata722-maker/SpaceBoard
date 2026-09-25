@@ -254,6 +254,7 @@
         if (showEclipticCb && showEclipticCb.checked) drawEcliptic(size.w, size.h);
         if (showConstellationsCb && showConstellationsCb.checked) drawConstellations();
         drawStars(size.w, size.h);
+        if (showConstellationsCb && showConstellationsCb.checked) drawConstellationLabels();
         if (showPlanetsCb && showPlanetsCb.checked) drawPlanets();
 
         if (state.selectedObject) {
@@ -338,6 +339,53 @@
         ctx.stroke();
     }
 
+    /**
+     * Circular-mean RA/Dec of a constellation's line points — where its name
+     * sits. Circular mean keeps wrap-around constellations (near RA 0/360) in
+     * the right place instead of dragging the label to the middle of the sky.
+     */
+    function constellationLabelPoint(constellation) {
+        var sinSum = 0, cosSum = 0, decSum = 0, count = 0;
+        var lines = constellation.lines;
+        for (var i = 0; i < lines.length; i++) {
+            for (var j = 0; j < lines[i].length; j++) {
+                var ra = lines[i][j][0] * DEG;
+                sinSum += Math.sin(ra);
+                cosSum += Math.cos(ra);
+                decSum += lines[i][j][1];
+                count++;
+            }
+        }
+        if (!count) return null;
+        var raDeg = Math.atan2(sinSum, cosSum) * RAD;
+        if (raDeg < 0) raDeg += 360;
+        return { ra: raDeg, dec: decSum / count };
+    }
+
+    /**
+     * Constellation names, drawn over the stars. Suppressed at wide fields of
+     * view where 24 names would overlap into unreadable noise.
+     */
+    function drawConstellationLabels() {
+        if (state.fovDeg > 100) return;
+        var size = cssSize();
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.font = '12px system-ui, sans-serif';
+        for (var i = 0; i < state.constellations.length; i++) {
+            var constellation = state.constellations[i];
+            if (!constellation._label) {
+                constellation._label = constellationLabelPoint(constellation);
+            }
+            if (!constellation._label) continue;
+            var p = projectRaDec(constellation._label.ra, constellation._label.dec);
+            if (p.x < 40 || p.y < 20 || p.x > size.w - 40 || p.y > size.h - 20) continue;
+            ctx.fillStyle = 'rgba(165,180,252,0.85)';
+            ctx.fillText(constellation.name, p.x, p.y);
+        }
+        ctx.restore();
+    }
+
     /** Star radius from magnitude; brighter stars are larger. */
     function starRadius(mag) {
         var m = (typeof mag === 'number') ? mag : 6;
@@ -378,6 +426,7 @@
     /** Planets, Sun and Moon via astronomy-engine; dimmed when below horizon. */
     function drawPlanets() {
         var showNames = showNamesCb && showNamesCb.checked;
+        var size = cssSize();
         for (var i = 0; i < state.planets.length; i++) {
             var planet = state.planets[i];
             var body = bodyFor(planet.name || planet.id);
@@ -386,6 +435,8 @@
             if (!pos) continue;
 
             var p = projectRaDec(pos.ra, pos.dec);
+            if (p.x < -30 || p.y < -30 || p.x > size.w + 30 || p.y > size.h + 30) continue;
+
             var below = pos.alt <= 0;
             var key = String(planet.name || '').toLowerCase();
             var r = key === 'sun' ? 7 : (key === 'moon' ? 5.5 : 4.5);
