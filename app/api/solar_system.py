@@ -1,6 +1,6 @@
-import os
-
 import requests
+
+from flask import current_app
 
 from app.cache import cache
 
@@ -10,8 +10,6 @@ SOLAR_SYSTEM_BASE_URL = "https://api.le-systeme-solaire.net/rest/bodies"
 # Request a free key at https://api.le-systeme-solaire.net/generatekey.html and
 # put it in .env as SOLAR_SYSTEM_API_KEY. Without a key the live call 401s and
 # get_planets() serves LOCAL_PLANETS instead, so the UI always has data.
-SOLAR_SYSTEM_API_KEY = os.getenv("SOLAR_SYSTEM_API_KEY", "")
-
 FIELDS = (
     "id,nameEnglish,name,massMassValue,massExp,radiusMean,gravity,"
     "semimajorAxis,eccentricity,inclination,orbitalPeriod,discoveredBy,moons"
@@ -19,9 +17,10 @@ FIELDS = (
 
 
 def _headers():
-    if SOLAR_SYSTEM_API_KEY:
-        return {"Authorization": f"Bearer {SOLAR_SYSTEM_API_KEY}"}
-    return {}
+    """Bearer token from app config, read per call (not at import time) so a
+    .env change or a per-instance override actually takes effect."""
+    key = (current_app.config.get("SOLAR_SYSTEM_API_KEY") or "").strip()
+    return {"Authorization": f"Bearer {key}"} if key else {}
 
 
 def _moons(count):

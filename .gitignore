@@ -5,9 +5,11 @@ __pycache__/
 .venv/
 venv/
 
-# Environment variables
+# Environment variables — real credentials never leave this machine.
+# .env.example is the committed blueprint, so it is explicitly re-included.
 .env
-.env.local
+.env.*
+!.env.example
 
 # Flask
 instance/
