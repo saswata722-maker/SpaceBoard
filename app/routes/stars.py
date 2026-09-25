@@ -38,13 +38,14 @@ def index():
     end_date = date.today()
     start_date = end_date - timedelta(days=7)
 
-    # Fetch multiple APODs for the gallery
-    from app.api.apod import get_apod as fetch_apod
-
+    # Fetch multiple APODs for the gallery.
+    # Call the module-level name deliberately: tests patch
+    # `app.routes.stars.get_apod`, and a function-local re-import would bypass
+    # the mock and hit NASA's real API on every test run.
     apods = []
     current = start_date
     while current <= end_date:
-        result = fetch_apod(current.isoformat())
+        result = get_apod(current.isoformat())
         if result["ok"] and result["data"]:
             apods.append(result["data"])
         current += timedelta(days=1)

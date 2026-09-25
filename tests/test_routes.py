@@ -253,6 +253,21 @@ def test_stars_route_empty(mock_get_apod, client):
     assert b"No recent imagery" in response.data
 
 
+@patch("app.routes.stars.get_apod")
+def test_stars_route_uses_mocked_apod_not_real_api(mock_get_apod, client):
+    """Regression guard: the view must call the module-level `get_apod` name so
+    @patch takes effect. A function-local re-import bypassed the mock, which
+    made these tests hit NASA's real API and pass or fail on network state."""
+    mock_get_apod.return_value = {"ok": True, "data": None, "error": None}
+
+    response = client.get("/stars/")
+
+    assert response.status_code == 200
+    # today back through 7 days = 8 gallery slots
+    assert mock_get_apod.call_count == 8
+    assert b"No recent imagery" in response.data
+
+
 # ---------------------------------------------------------------------------
 # "Where to find this planet tonight" (client-side astronomy-engine block)
 # ---------------------------------------------------------------------------
