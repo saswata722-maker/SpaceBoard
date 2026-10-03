@@ -40,15 +40,19 @@ def sky_html():
 
 def test_constellation_file_is_well_formed(constellations):
     """Every constellation has usable geometry: unique id, at least one segment,
-    at least two points per segment, and coordinates inside valid ranges."""
-    assert len(constellations) >= 20, "expected the recognisable-constellation set"
+    at least two points per segment, coordinates inside valid ranges, and an
+    explicit label flag (the file now carries all 88 IAU constellations)."""
+    assert len(constellations) >= 88, "expected the full IAU constellation set"
 
     ids = [c["id"] for c in constellations]
     assert len(ids) == len(set(ids)), "duplicate constellation ids"
 
     point_count = 0
+    labelled = 0
     for c in constellations:
         assert c["name"], c
+        assert isinstance(c["label"], bool), f"{c['id']} missing label flag"
+        labelled += c["label"]
         assert len(c["lines"]) >= 1, f"{c['id']} has no lines"
         for segment in c["lines"]:
             assert len(segment) >= 2, f"{c['id']} has a degenerate segment"
@@ -57,7 +61,10 @@ def test_constellation_file_is_well_formed(constellations):
                 assert -90.0 <= dec <= 90.0, f"{c['id']} dec out of range: {dec}"
                 point_count += 1
 
-    assert point_count >= 100, "line data looks too sparse to be useful"
+    assert point_count >= 500, "line data looks too sparse to be useful"
+    # Only recognisable figures are named on the canvas; labelling all 89 would
+    # overlap into unreadable noise.
+    assert 20 <= labelled <= 30, f"{labelled} labels - expected only the recognisable subset"
 
 
 def test_expected_constellations_present(constellations):
@@ -65,6 +72,25 @@ def test_expected_constellations_present(constellations):
     for want in ("Ori", "UMa", "Cas", "Cyg", "Lyr", "Aql", "Leo", "Sco",
                  "Tau", "Gem", "Cru", "Peg"):
         assert want in ids, f"missing recognisable constellation {want}"
+
+
+def test_only_recognisable_constellations_are_labelled(constellations):
+    """All 89 draw lines, but only the familiar figures are named — a viewer
+    must not have to hunt through 89 overlapping labels."""
+    by_id = {c["id"]: c for c in constellations}
+
+    # recognisable ones must carry a name
+    for want in ("Ori", "UMa", "Cas", "Cyg", "Lyr", "Leo", "Sco", "Tau"):
+        assert by_id[want]["label"] is True, f"{want} should be labelled"
+
+    # obscure figures must stay unnamed
+    for obscure in ("Cae", "Ant", "Nor", "Vul", "Col", "Phe"):
+        assert obscure in by_id, f"missing {obscure}"
+        assert by_id[obscure]["label"] is False, f"{obscure} should not be labelled"
+
+    # and sky.js honours the flag
+    sky_js = _read(SKY_JS)
+    assert "if (constellation.label === false) continue;" in sky_js
 
 
 def test_line_data_does_not_collide_with_star_catalog(constellations):

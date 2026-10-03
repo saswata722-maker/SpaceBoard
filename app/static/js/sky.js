@@ -384,6 +384,8 @@
         ctx.font = '12px system-ui, sans-serif';
         for (var i = 0; i < state.constellations.length; i++) {
             var constellation = state.constellations[i];
+            // Obscure figures draw lines but stay unnamed to avoid label noise.
+            if (constellation.label === false) continue;
             if (!constellation._label) {
                 constellation._label = constellationLabelPoint(constellation);
             }
