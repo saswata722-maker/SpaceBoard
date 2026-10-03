@@ -45,6 +45,12 @@
     var showNamesCb = document.getElementById('show-names');
     var showConstellationsCb = document.getElementById('show-constellations');
     var dirBtns = document.querySelectorAll('.view-dir-btn');
+    var animPlayBtn = document.getElementById('anim-play-btn');
+    var animPlayIcon = document.getElementById('anim-play-icon');
+    var animPlayText = document.getElementById('anim-play-text');
+    var animSpeedSelect = document.getElementById('anim-speed');
+    var timeNowBtn = document.getElementById('time-now-btn');
+
 
     var DEG = Math.PI / 180;
     var RAD = 180 / Math.PI;
@@ -65,6 +71,10 @@
         fovDeg: 180,
         selectedObject: null, hoveredObject: null,
         dragging: false, dragX: 0, dragY: 0
+        animating: false,
+        animSpeed: 3600,
+        lastAnimTs: 0
+
     };
 
     function bodyFor(name) {
@@ -688,8 +698,80 @@
         render();
     }
 
+    function stopAnimation() {
+        if (!state.animating) return;
+        state.animating = false;
+        if (animPlayIcon) animPlayIcon.innerHTML = '&#9658;';
+        if (animPlayText) animPlayText.textContent = 'Play';
+        if (animPlayBtn) {
+            animPlayBtn.classList.remove('bg-blue-600', 'border-blue-500');
+            animPlayBtn.classList.add('bg-space-700', 'border-gray-600');
+        }
+    }
+
+    function startAnimation() {
+        if (state.animating) return;
+        state.animating = true;
+        state.lastAnimTs = performance.now();
+        if (animPlayIcon) animPlayIcon.innerHTML = '&#10074;&#10074;';
+        if (animPlayText) animPlayText.textContent = 'Pause';
+        if (animPlayBtn) {
+            animPlayBtn.classList.remove('bg-space-700', 'border-gray-600');
+            animPlayBtn.classList.add('bg-blue-600', 'border-blue-500');
+        }
+        requestAnimationFrame(animStep);
+    }
+
+    function toggleAnimation() {
+        if (state.animating) stopAnimation();
+        else startAnimation();
+    }
+
+    function animStep(ts) {
+        if (!state.animating) return;
+        var dtSec = (ts - state.lastAnimTs) / 1000;
+        state.lastAnimTs = ts;
+        // Cap dt to 0.2s so background tab freezes do not jump forward wildly
+        if (dtSec > 0.2) dtSec = 0.2;
+
+        var msToAdd = dtSec * state.animSpeed * 1000;
+        state.utcTime = new Date(state.utcTime.getTime() + msToAdd);
+
+        if (obsTimeInput) obsTimeInput.value = toLocalInput(state.utcTime);
+        if (timeSlider) {
+            timeSlider.value = state.utcTime.getHours() + state.utcTime.getMinutes() / 60;
+        }
+
+        render();
+        requestAnimationFrame(animStep);
+    }
+
+    if (animPlayBtn) {
+        animPlayBtn.addEventListener('click', toggleAnimation);
+    }
+
+    if (animSpeedSelect) {
+        animSpeedSelect.addEventListener('change', function () {
+            state.animSpeed = parseFloat(animSpeedSelect.value) || 3600;
+        });
+    }
+
+    if (timeNowBtn) {
+        timeNowBtn.addEventListener('click', function () {
+            stopAnimation();
+            var nowDate = new Date();
+            state.utcTime = nowDate;
+            if (obsTimeInput) obsTimeInput.value = toLocalInput(nowDate);
+            if (timeSlider) timeSlider.value = nowDate.getHours() + nowDate.getMinutes() / 60;
+            applyTime();
+        });
+    }
+
+
     if (timeSlider) {
         timeSlider.addEventListener('input', function () {
+            stopAnimation();
+
             var hours = parseFloat(timeSlider.value) || 0;
             var base = new Date();
             base.setHours(0, 0, 0, 0);
@@ -700,6 +782,8 @@
     }
 
     obsTimeInput.addEventListener('change', function () {
+        stopAnimation();
+
         if (!obsTimeInput.value) return;
         state.utcTime = new Date(obsTimeInput.value);
         timeSlider.value = state.utcTime.getHours() + state.utcTime.getMinutes() / 60;

@@ -122,6 +122,59 @@ def test_sky_html_has_constellation_toggle(sky_html):
     assert "Constellation lines" in sky_html
 
 
+# ---------------------------------------------------------------------------
+# Time animation controls (Play / Pause / speed / Now)
+# ---------------------------------------------------------------------------
+
+ANIMATION_IDS = ("anim-play-btn", "anim-play-icon", "anim-play-text",
+                 "anim-speed", "time-now-btn")
+
+
+def test_sky_html_has_animation_controls(sky_html):
+    """Play/Pause, a speed selector and a Now reset must exist in the markup."""
+    for element_id in ANIMATION_IDS:
+        assert 'id="%s"' % element_id in sky_html, f"missing #{element_id}"
+    # speed presets: 60x, 300x, 3600x (default), 86400x
+    for value in ("60", "300", "3600", "86400"):
+        assert 'value="%s"' % value in sky_html, f"missing speed {value}x"
+    assert "selected" in sky_html.split('id="anim-speed"')[1][:400]
+
+
+def test_sky_js_wires_animation_controls(sky_js):
+    """sky.js must bind every control and drive a requestAnimationFrame loop."""
+    for element_id in ANIMATION_IDS:
+        assert "'%s'" % element_id in sky_js, f"sky.js does not read #{element_id}"
+
+    for required in ("function animStep(", "function startAnimation(",
+                     "function stopAnimation(", "requestAnimationFrame(",
+                     "performance.now()"):
+        assert required in sky_js, f"missing {required}"
+
+    # start/stop are idempotent and toggle the label, not just the state flag
+    for required in ("state.animating = true", "state.animating = false",
+                     "'Pause'", "'Play'"):
+        assert required in sky_js
+
+
+def test_manual_time_edit_pauses_animation(sky_js):
+    """Scrubbing the slider or typing a date must stop playback, otherwise the
+    next animation frame overwrites the user's chosen time."""
+    assert sky_js.count("stopAnimation();") >= 3, (
+        "expected stopAnimation() in the play toggle, the slider handler and "
+        "the date-time handler"
+    )
+
+
+def test_animation_step_updates_inputs(sky_js):
+    """Each frame must write the simulated clock back into both inputs so the
+    date-time picker and the scrub slider stay in sync with the canvas."""
+    step_body = sky_js.split("function animStep(")[1].split("if (animPlayBtn)")[0]
+    assert "obsTimeInput.value = toLocalInput(" in step_body
+    assert "timeSlider.value" in step_body
+    # guards against tab-freeze jumps
+    assert "dtSec > 0.2" in step_body
+
+
 def test_sky_js_draws_constellation_labels(sky_js):
     """Lines alone do not tell you what you are looking at; the map also needs
     to name the constellation near each stick figure."""
