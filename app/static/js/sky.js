@@ -70,7 +70,7 @@
         centerRa: 0, centerDec: 45,
         fovDeg: 180,
         selectedObject: null, hoveredObject: null,
-        dragging: false, dragX: 0, dragY: 0
+        dragging: false, dragX: 0, dragY: 0,
         animating: false,
         animSpeed: 3600,
         lastAnimTs: 0

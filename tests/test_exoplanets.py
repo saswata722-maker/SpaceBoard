@@ -80,6 +80,45 @@ def test_get_exoplanets_success(mock_get):
 
 
 @patch("app.api.exoplanets.requests.get")
+def test_get_exoplanets_uses_top_not_limit(mock_get):
+    """The Exoplanet Archive's Oracle/ADQL backend requires ``select top N``
+    rather than ``LIMIT N``.  Verify the outgoing query shape."""
+    mock_get.return_value = _mock_response(SAMPLE_EXOPLANETS)
+
+    app = _app()
+    with app.app_context():
+        from app.cache import cache
+
+        cache.clear()
+        get_exoplanets(limit=50)
+
+    query = mock_get.call_args[1]["params"]["query"]
+    assert "select top 50" in query.lower(), f"Expected 'select top 50', got: {query}"
+    assert "limit" not in query.lower().split("from")[1], (
+        f"'limit' must not appear after FROM: {query}"
+    )
+
+
+@patch("app.api.exoplanets.requests.get")
+def test_get_exoplanets_search_keeps_default_flag(mock_get):
+    """When searching, ``default_flag = 1`` must stay in the WHERE clause to
+    avoid duplicate rows per planet."""
+    mock_get.return_value = _mock_response([SAMPLE_EXOPLANETS[1]])
+
+    app = _app()
+    with app.app_context():
+        from app.cache import cache
+
+        cache.clear()
+        result = get_exoplanets(search="TRAPPIST")
+
+    assert result["ok"] is True
+    query = mock_get.call_args[1]["params"]["query"]
+    assert "default_flag" in query, f"default_flag missing from search query: {query}"
+    assert "TRAPPIST" in query
+
+
+@patch("app.api.exoplanets.requests.get")
 def test_get_exoplanets_search(mock_get):
     mock_get.return_value = _mock_response([SAMPLE_EXOPLANETS[1]])
 

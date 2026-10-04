@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 
 from requests.exceptions import HTTPError, Timeout
 
-from app.api.solar_system import get_body, get_bodies, get_planets
+from app.api.solar_system import get_body, get_bodies, get_planets, _normalise
 
 
 def _mock_response(json_data, status_code=200):
@@ -23,20 +23,24 @@ def _app():
     return app
 
 
-SAMPLE_BODIES = [
+# ---------------------------------------------------------------------------
+# Sample payloads that look like the *upstream* API (2026-era field names).
+# get_bodies() runs _normalise() on these before returning.
+# ---------------------------------------------------------------------------
+
+SAMPLE_UPSTREAM_BODIES = [
     {
         "id": "mercure",
         "name": "Mercure",
-        "nameEnglish": "Mercury",
+        "englishName": "Mercury",
         "isPlanet": True,
-        "massMassValue": 3.3,
-        "massExp": 23,
-        "radiusMean": 2439.7,
+        "mass": {"massValue": 3.3, "massExponent": 23},
+        "meanRadius": 2439.7,
         "gravity": 3.7,
         "density": 5.43,
         "escape": 4250.0,
         "semimajorAxis": 57909050,
-        "orbitalPeriod": 87.97,
+        "sideralOrbit": 87.97,
         "moons": [],
         "discoveredBy": None,
         "discoveryDate": None,
@@ -44,16 +48,15 @@ SAMPLE_BODIES = [
     {
         "id": "terre",
         "name": "Terre",
-        "nameEnglish": "Earth",
+        "englishName": "Earth",
         "isPlanet": True,
-        "massMassValue": 5.97,
-        "massExp": 24,
-        "radiusMean": 6371.0,
+        "mass": {"massValue": 5.97, "massExponent": 24},
+        "meanRadius": 6371.0,
         "gravity": 9.81,
         "density": 5.51,
         "escape": 11186.0,
         "semimajorAxis": 149598023,
-        "orbitalPeriod": 365.25,
+        "sideralOrbit": 365.25,
         "moons": [{"moon": "Lune", "rel": ""}],
         "discoveredBy": None,
         "discoveryDate": None,
@@ -80,9 +83,41 @@ BUILTIN_PLANET_NAMES = (
 )
 
 
+# ---------------------------------------------------------------------------
+# _normalise() unit tests
+# ---------------------------------------------------------------------------
+
+
+def test_normalise_maps_upstream_fields():
+    """_normalise() must turn the new upstream schema into the template shape."""
+    raw = SAMPLE_UPSTREAM_BODIES[1]  # Earth
+    norm = _normalise(raw)
+
+    assert norm["nameEnglish"] == "Earth"
+    assert norm["massMassValue"] == 5.97
+    assert norm["massExp"] == 24
+    assert norm["radiusMean"] == 6371.0
+    assert norm["orbitalPeriod"] == 365.25
+    assert norm["isPlanet"] is True
+    assert isinstance(norm["moons"], list)
+
+
+def test_normalise_handles_missing_mass():
+    """Bodies with mass=None or mass={} should yield None for mass fields."""
+    raw = {"id": "x", "name": "X", "englishName": "X", "mass": None}
+    norm = _normalise(raw)
+    assert norm["massMassValue"] is None
+    assert norm["massExp"] is None
+
+
+# ---------------------------------------------------------------------------
+# get_bodies()
+# ---------------------------------------------------------------------------
+
+
 @patch("app.api.solar_system.requests.get")
 def test_get_bodies_success(mock_get):
-    mock_get.return_value = _mock_response({"bodies": SAMPLE_BODIES})
+    mock_get.return_value = _mock_response({"bodies": SAMPLE_UPSTREAM_BODIES})
 
     app = _app()
     with app.app_context():
@@ -94,12 +129,13 @@ def test_get_bodies_success(mock_get):
     assert result["ok"] is True
     assert result["error"] is None
     assert len(result["data"]) == 2
+    # After normalisation the template field name must be present.
     assert result["data"][0]["nameEnglish"] == "Mercury"
 
 
 @patch("app.api.solar_system.requests.get")
 def test_get_bodies_planets_only(mock_get):
-    mock_get.return_value = _mock_response({"bodies": SAMPLE_BODIES})
+    mock_get.return_value = _mock_response({"bodies": SAMPLE_UPSTREAM_BODIES})
 
     app = _app()
     with app.app_context():
@@ -110,6 +146,28 @@ def test_get_bodies_planets_only(mock_get):
 
     assert result["ok"] is True
     assert len(result["data"]) == 2  # Both samples are planets
+
+
+@patch("app.api.solar_system.requests.get")
+def test_get_bodies_normalised_shape(mock_get):
+    """Every normalised body carries the fields the template dereferences."""
+    mock_get.return_value = _mock_response({"bodies": SAMPLE_UPSTREAM_BODIES})
+
+    app = _app()
+    with app.app_context():
+        from app.cache import cache
+
+        cache.clear()
+        result = get_bodies(is_planet=True)
+
+    for body in result["data"]:
+        assert "nameEnglish" in body
+        assert "massMassValue" in body
+        assert "massExp" in body
+        assert "radiusMean" in body
+        assert "gravity" in body
+        assert "orbitalPeriod" in body
+        assert "moons" in body
 
 
 @patch("app.api.solar_system.requests.get")
@@ -181,7 +239,7 @@ def test_get_body_timeout(mock_get):
 def test_get_planets_live_data_has_no_note(mock_get):
     """When the upstream API answers, planets come straight from it and no
     provenance note is needed."""
-    mock_get.return_value = _mock_response({"bodies": SAMPLE_BODIES})
+    mock_get.return_value = _mock_response({"bodies": SAMPLE_UPSTREAM_BODIES})
 
     app = _app()
     with app.app_context():
@@ -193,7 +251,8 @@ def test_get_planets_live_data_has_no_note(mock_get):
     assert result["ok"] is True
     assert result["error"] is None
     assert result["note"] is None
-    assert result["data"] == SAMPLE_BODIES
+    # Data should be normalised, not raw upstream.
+    assert all("nameEnglish" in b for b in result["data"])
 
 
 @patch("app.api.solar_system.requests.get")

@@ -10,9 +10,11 @@ SOLAR_SYSTEM_BASE_URL = "https://api.le-systeme-solaire.net/rest/bodies"
 # Request a free key at https://api.le-systeme-solaire.net/generatekey.html and
 # put it in .env as SOLAR_SYSTEM_API_KEY. Without a key the live call 401s and
 # get_planets() serves LOCAL_PLANETS instead, so the UI always has data.
+#
+# Field names as the upstream API actually returns them (2026-era schema).
 FIELDS = (
-    "id,nameEnglish,name,massMassValue,massExp,radiusMean,gravity,"
-    "semimajorAxis,eccentricity,inclination,orbitalPeriod,discoveredBy,moons"
+    "id,englishName,name,isPlanet,mass,meanRadius,gravity,"
+    "semimajorAxis,eccentricity,inclination,sideralOrbit,discoveredBy,moons"
 )
 
 
@@ -21,6 +23,34 @@ def _headers():
     .env change or a per-instance override actually takes effect."""
     key = (current_app.config.get("SOLAR_SYSTEM_API_KEY") or "").strip()
     return {"Authorization": f"Bearer {key}"} if key else {}
+
+
+def _normalise(body):
+    """Map a live API body into the shape every template and test expects.
+
+    Upstream renames since the code was first written:
+        englishName   → nameEnglish
+        mass.massValue / mass.massExponent → massMassValue / massExp
+        meanRadius    → radiusMean
+        sideralOrbit  → orbitalPeriod
+    """
+    mass = body.get("mass") or {}
+    return {
+        "id":               body.get("id"),
+        "name":             body.get("name"),
+        "nameEnglish":      body.get("englishName"),
+        "isPlanet":         body.get("isPlanet"),
+        "massMassValue":    mass.get("massValue"),
+        "massExp":          mass.get("massExponent"),
+        "radiusMean":       body.get("meanRadius"),
+        "gravity":          body.get("gravity"),
+        "semimajorAxis":    body.get("semimajorAxis"),
+        "eccentricity":     body.get("eccentricity"),
+        "inclination":      body.get("inclination"),
+        "orbitalPeriod":    body.get("sideralOrbit"),
+        "discoveredBy":     body.get("discoveredBy"),
+        "moons":            body.get("moons") or [],
+    }
 
 
 def _moons(count):
@@ -99,7 +129,10 @@ def get_bodies(is_planet=None):
         )
         response.raise_for_status()
         payload = response.json()
-        bodies = payload.get("bodies", [])
+        raw_bodies = payload.get("bodies", [])
+
+        # Normalise upstream field names → template-expected names.
+        bodies = [_normalise(b) for b in raw_bodies]
 
         if is_planet:
             bodies = [b for b in bodies if b.get("isPlanet") is True]

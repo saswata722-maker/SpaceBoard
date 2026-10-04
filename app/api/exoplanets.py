@@ -6,11 +6,12 @@ from app.cache import cache
 
 EXOPLANET_TAP_URL = "https://exoplanetarchive.ipac.caltech.edu/TAP/sync"
 
-DEFAULT_QUERY = (
-    "select pl_name, hostname, sy_snum, sy_pnum, discoverymethod, "
+# Column list shared by every query.  The limit is applied via ADQL's
+# ``select top N`` (the Archive's Oracle backend rejects ``LIMIT``).
+_COLUMNS = (
+    "pl_name, hostname, sy_snum, sy_pnum, discoverymethod, "
     "disc_year, pl_orbper, pl_orbsmax, pl_rade, pl_radj, pl_bmasse, "
-    "pl_bmassj, pl_eqt, pl_dens, st_spectype "
-    "from ps where default_flag = 1 order by pl_name"
+    "pl_bmassj, pl_eqt, pl_dens, st_spectype"
 )
 
 
@@ -43,10 +44,13 @@ def get_exoplanets(search=None, limit=200):
     """
     try:
         if search and search.strip():
-            where = f"where {_search_condition(search.strip())}"
-            query = f"{DEFAULT_QUERY.replace('where default_flag = 1', where)} limit {limit}"
+            where = (
+                f"where default_flag = 1 and {_search_condition(search.strip())}"
+            )
         else:
-            query = f"{DEFAULT_QUERY} limit {limit}"
+            where = "where default_flag = 1"
+
+        query = f"select top {limit} {_COLUMNS} from ps {where}"
 
         params = {"query": query, "format": "json"}
         response = requests.get(EXOPLANET_TAP_URL, params=params, timeout=20)
