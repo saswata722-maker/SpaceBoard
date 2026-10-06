@@ -14,6 +14,22 @@ _COLUMNS = (
     "pl_bmassj, pl_eqt, pl_dens, st_spectype"
 )
 
+# Every discovery method present in the Archive's default-planets table,
+# ordered by how many planets it discovered. Doubles as the dropdown vocabulary
+# and as the injection guard: a filter is only applied when it is a known value.
+DISCOVERY_METHODS = (
+    "Transit",
+    "Radial Velocity",
+    "Microlensing",
+    "Imaging",
+    "Transit Timing Variations",
+    "Eclipse Timing Variations",
+    "Orbital Brightness Modulation",
+    "Pulsar Timing",
+    "Astrometry",
+    "Disk Kinematics",
+)
+
 
 def _ok(data):
     return {"ok": True, "data": data, "error": None}
@@ -32,24 +48,26 @@ def _search_condition(search_term):
 
 
 @cache.memoize(timeout=3600)
-def get_exoplanets(search=None, limit=200):
+def get_exoplanets(search=None, discovery=None, limit=200):
     """Fetch confirmed exoplanets from the NASA Exoplanet Archive.
 
     Args:
         search: Optional text to filter by planet or host-star name.
+        discovery: Optional discovery method; ignored unless it is one of
+            DISCOVERY_METHODS (which is also the SQL-injection guard).
         limit: Maximum number of results (default 200).
 
     Returns:
         dict: {"ok": bool, "data": list|None, "error": str|None}
     """
     try:
+        conditions = ["default_flag = 1"]
         if search and search.strip():
-            where = (
-                f"where default_flag = 1 and {_search_condition(search.strip())}"
-            )
-        else:
-            where = "where default_flag = 1"
+            conditions.append(_search_condition(search.strip()))
+        if discovery and discovery.strip() in DISCOVERY_METHODS:
+            conditions.append(f"discoverymethod = '{discovery.strip()}'")
 
+        where = "where " + " and ".join(conditions)
         query = f"select top {limit} {_COLUMNS} from ps {where}"
 
         params = {"query": query, "format": "json"}

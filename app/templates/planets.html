@@ -61,8 +61,16 @@
             <input type="text" name="search" value="{{ search }}"
                    placeholder="Search by planet or host star (e.g. Kepler, Trappist)..."
                    class="flex-1 bg-space-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <label for="method" class="sr-only">Discovery method</label>
+            <select id="method" name="method"
+                    class="bg-space-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">All discovery methods</option>
+                {% for m in methods %}
+                <option value="{{ m }}" {% if m == selected_method %}selected{% endif %}>{{ m }}</option>
+                {% endfor %}
+            </select>
             <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2 rounded-lg transition">Search</button>
-            {% if search %}
+            {% if search or selected_method %}
             <a href="{{ url_for('planets.index') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium px-6 py-2 rounded-lg transition text-center">Clear</a>
             {% endif %}
         </div>

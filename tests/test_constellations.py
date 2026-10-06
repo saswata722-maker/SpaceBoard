@@ -209,6 +209,62 @@ def test_sky_js_draws_constellation_labels(sky_js):
     assert "drawStars(size.w, size.h)" in sky_js
 
 
+# ---------------------------------------------------------------------------
+# Night-vision (red) mode
+# ---------------------------------------------------------------------------
+
+def test_sky_html_has_night_mode_toggle(sky_html):
+    assert 'id="show-nightmode"' in sky_html, "night mode checkbox missing"
+    assert "Night mode" in sky_html
+
+
+def test_sky_html_dims_ui_for_night_vision(sky_html):
+    """The chrome must be red-shifted too, or the sidebar alone destroys
+    dark adaptation while the canvas stays red."""
+    assert "body.night-vision" in sky_html
+    assert "sepia(1)" in sky_html
+
+
+def test_sky_js_centralises_draw_colours(sky_js):
+    """Every canvas colour must come from PALETTE so a single toggle re-skins
+    the whole map. Hard-coded colours are exactly how a night mode ends up
+    half-applied."""
+    assert "var PALETTE" in sky_js
+    assert "function palette()" in sky_js
+    for theme in ("day:", "night:"):
+        assert theme in sky_js, f"palette missing {theme} theme"
+    for token in ("palette().star", "palette().constellation", "palette().grid",
+                  "palette().ecliptic", "palette().planetLabel"):
+        assert token in sky_js, f"draw path not using palette: {token}"
+
+
+def test_sky_js_has_no_stray_colours_in_draw_code(sky_js):
+    """Audit: colour literals may only live inside the PALETTE block."""
+    lines = sky_js.split("\n")
+    palette_start = next(i for i, line in enumerate(lines) if "var PALETTE = {" in line)
+    palette_end = next(i for i, line in enumerate(lines)
+                       if i > palette_start and line.strip() == "};")
+
+    colour = re.compile(r"#[0-9a-fA-F]{6}\b|rgba\(")
+    stray = [
+        (i + 1, line.strip())
+        for i, line in enumerate(lines)
+        if colour.search(line) and not palette_start <= i <= palette_end
+        # the near-black background gradient is deliberately theme-independent,
+        # and "&#9658;" style HTML entities are not colours.
+        and not line.strip().startswith(("grad.addColorStop", "if (animPlayIcon)"))
+    ]
+    assert not stray, f"colour literal outside PALETTE: {stray}"
+
+
+def test_sky_js_persists_night_mode(sky_js):
+    """Losing the preference on reload would blast dark adaptation."""
+    assert "sb-night-mode" in sky_js
+    assert "localStorage.getItem" in sky_js
+    assert "localStorage.setItem" in sky_js
+    assert "classList.toggle('night-vision'" in sky_js
+
+
 def test_star_catalog_has_no_duplicate_positions():
     """The catalog shipped with 36 duplicate (ra, dec) pairs, so those stars
     were drawn twice (too bright) and both copies were clickable."""
