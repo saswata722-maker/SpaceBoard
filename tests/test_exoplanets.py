@@ -195,3 +195,65 @@ def test_get_exoplanets_unexpected_format(mock_get):
 
     assert result["ok"] is False
     assert "Unexpected response format" in result["error"]
+
+
+# ---------------------------------------------------------------------------
+# Discovery-method filter
+# ---------------------------------------------------------------------------
+
+@patch("app.api.exoplanets.requests.get")
+def test_get_exoplanets_discovery_filter_in_query(mock_get):
+    """A known method must reach the ADQL WHERE clause."""
+    mock_get.return_value = _mock_response([SAMPLE_EXOPLANETS[0]])
+
+    app = _app()
+    with app.app_context():
+        from app.cache import cache
+
+        cache.clear()
+        result = get_exoplanets(discovery="Radial Velocity")
+
+    assert result["ok"] is True
+    query = mock_get.call_args[1]["params"]["query"]
+    assert "discoverymethod = 'Radial Velocity'" in query, query
+    # and default_flag must survive so rows are not duplicated
+    assert "default_flag = 1" in query, query
+
+
+@patch("app.api.exoplanets.requests.get")
+def test_get_exoplanets_search_and_discovery_combine(mock_get):
+    """Both filters must be ANDed, not either/or."""
+    mock_get.return_value = _mock_response([SAMPLE_EXOPLANETS[1]])
+
+    app = _app()
+    with app.app_context():
+        from app.cache import cache
+
+        cache.clear()
+        get_exoplanets(search="TRAPPIST", discovery="Transit")
+
+    query = mock_get.call_args[1]["params"]["query"].lower()
+    assert query.count(" where ") == 1, "must build a single WHERE clause"
+    assert "default_flag = 1" in query
+    assert "discoverymethod = 'transit'" in query
+    assert "trappist" in query
+
+
+@patch("app.api.exoplanets.requests.get")
+def test_get_exoplanets_unknown_discovery_is_ignored(mock_get):
+    """Anything outside the whitelist (e.g. an injection attempt) must not be
+    interpolated into SQL — the filter is simply dropped."""
+    mock_get.return_value = _mock_response(SAMPLE_EXOPLANETS)
+
+    app = _app()
+    with app.app_context():
+        from app.cache import cache
+
+        cache.clear()
+        get_exoplanets(discovery="Transit' OR '1'='1")
+
+    query = mock_get.call_args[1]["params"]["query"]
+    # discoverymethod is a SELECT column, not a WHERE condition. The filter must
+    # never be interpolated, so no injection clause may survive.
+    assert "discoverymethod = 'Transit' OR '1'='1'" not in query, query
+    assert "OR" not in query
