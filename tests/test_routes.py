@@ -407,3 +407,136 @@ def test_planets_and_sky_pages_declare_an_inline_favicon(
         html = client.get(path).data.decode()
         assert 'rel="icon"' in html, f"{path} does not declare a favicon"
         assert "data:image/svg+xml" in html, f"{path} favicon is not inline"
+
+
+# ---------------------------------------------------------------------------
+# APOD gallery date-range picker / paging
+# ---------------------------------------------------------------------------
+
+def _gallery_range(html):
+    """Return (start, end) from the gallery's "Showing ... from ... to ..." line."""
+    match = re.search(r"from (\d{4}-\d{2}-\d{2}) to (\d{4}-\d{2}-\d{2})", html)
+    return match.groups() if match else (None, None)
+
+
+@patch("app.routes.stars.get_apod")
+def test_stars_default_window_fetches_eight_days(mock_get_apod, client):
+    mock_get_apod.return_value = {"ok": True, "data": None, "error": None}
+
+    response = client.get("/stars/")
+
+    assert response.status_code == 200
+    assert mock_get_apod.call_count == 8, "default window is 8 days"
+
+
+@patch("app.routes.stars.get_apod")
+def test_stars_honours_requested_range(mock_get_apod, client):
+    """A requested window drives how many days are fetched."""
+    mock_get_apod.return_value = {"ok": True, "data": None, "error": None}
+
+    response = client.get("/stars/?start=2024-05-01&end=2024-05-10")
+
+    assert response.status_code == 200
+    assert mock_get_apod.call_count == 10
+    assert _gallery_range(response.data.decode()) == ("2024-05-01", "2024-05-10")
+
+
+@patch("app.routes.stars.get_apod")
+def test_stars_clamps_range_to_thirty_days(mock_get_apod, client):
+    """APOD has no limit, but a window wider than MAX_GALLERY_DAYS would fire
+    dozens of upstream requests for one page view."""
+    mock_get_apod.return_value = {"ok": True, "data": None, "error": None}
+
+    response = client.get("/stars/?start=2024-01-01&end=2024-03-31")
+
+    assert mock_get_apod.call_count == 30
+    from datetime import date as _d
+    start, end = _gallery_range(response.data.decode())
+    assert start != "2024-01-01", "window start should have been clamped"
+    assert (_d.fromisoformat(end) - _d.fromisoformat(start)).days + 1 == 30
+
+
+@patch("app.routes.stars.get_apod")
+def test_stars_ignores_future_dates(mock_get_apod, client):
+    """APOD has nothing for tomorrow; the window must not run past today."""
+    mock_get_apod.return_value = {"ok": True, "data": None, "error": None}
+
+    response = client.get("/stars/?start=2099-01-01&end=2099-01-31")
+
+    from datetime import date
+    start, end = _gallery_range(response.data.decode())
+    assert end == date.today().isoformat()
+    assert start == date.today().isoformat()
+
+
+@patch("app.routes.stars.get_apod")
+def test_stars_invalid_dates_fall_back_to_default(mock_get_apod, client):
+    """Garbage in the query string must not blow up the page."""
+    mock_get_apod.return_value = {"ok": True, "data": None, "error": None}
+
+    response = client.get("/stars/?start=nonsense&end=&other=1")
+
+    assert response.status_code == 200
+    assert mock_get_apod.call_count == 8
+    start, end = _gallery_range(response.data.decode())
+    assert start and end
+
+
+@patch("app.routes.stars.get_apod")
+def test_stars_paging_links_render(mock_get_apod, client):
+    mock_get_apod.return_value = {"ok": True, "data": None, "error": None}
+
+    html = client.get("/stars/").data.decode()
+
+    assert "Newer" in html, "previous-window link missing"
+    assert "Older" in html, "next-window link missing"
+    # the previous link must point at an older window
+    prev = re.search(r'start=(\d{4}-\d{2}-\d{2})&amp;end=(\d{4}-\d{2}-\d{2})', html)
+    assert prev, "paging link has no start/end params"
+    from datetime import date as _d
+    assert _d.fromisoformat(prev.group(2)) < _d.fromisoformat(_gallery_range(html)[1])
+
+
+# ---------------------------------------------------------------------------
+# Exoplanet discovery-method dropdown
+# ---------------------------------------------------------------------------
+
+@patch("app.routes.planets.get_exoplanets")
+@patch("app.routes.planets.get_planets")
+def test_planets_route_renders_discovery_dropdown(
+        mock_get_planets, mock_get_exoplanets, client):
+    mock_get_planets.return_value = {"ok": True, "data": [], "error": None, "note": None}
+    mock_get_exoplanets.return_value = {"ok": True, "data": [], "error": None}
+
+    html = client.get("/planets/").data.decode()
+
+    assert 'id="method"' in html, "discovery-method select missing"
+    assert "All discovery methods" in html
+    for method in ("Transit", "Radial Velocity", "Microlensing", "Imaging"):
+        assert f"<option value=\"{method}\"" in html, f"{method} not offered"
+
+
+@patch("app.routes.planets.get_exoplanets")
+@patch("app.routes.planets.get_planets")
+def test_planets_route_passes_method_to_api(
+        mock_get_planets, mock_get_exoplanets, client):
+    mock_get_planets.return_value = {"ok": True, "data": [], "error": None, "note": None}
+    mock_get_exoplanets.return_value = {"ok": True, "data": [], "error": None}
+
+    html = client.get("/planets/?method=Radial+Velocity").data.decode()
+
+    assert mock_get_exoplanets.call_args[1].get("discovery") == "Radial Velocity"
+    assert 'value="Radial Velocity" selected' in html
+
+
+@patch("app.routes.planets.get_exoplanets")
+@patch("app.routes.planets.get_planets")
+def test_planets_route_ignores_unknown_method(
+        mock_get_planets, mock_get_exoplanets, client):
+    """An off-list method is dropped by the route, not passed upstream."""
+    mock_get_planets.return_value = {"ok": True, "data": [], "error": None, "note": None}
+    mock_get_exoplanets.return_value = {"ok": True, "data": [], "error": None}
+
+    client.get("/planets/?method=Definitely+Not+A+Method")
+
+    assert mock_get_exoplanets.call_args[1].get("discovery") is None

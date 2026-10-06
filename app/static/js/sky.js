@@ -44,6 +44,7 @@
     var showGridCb = document.getElementById('show-grid');
     var showNamesCb = document.getElementById('show-names');
     var showConstellationsCb = document.getElementById('show-constellations');
+    var showNightModeCb = document.getElementById('show-nightmode');
     var dirBtns = document.querySelectorAll('.view-dir-btn');
     var animPlayBtn = document.getElementById('anim-play-btn');
     var animPlayIcon = document.getElementById('anim-play-icon');
@@ -55,6 +56,50 @@
     var DEG = Math.PI / 180;
     var RAD = 180 / Math.PI;
     var PIXELS_PER_DEG = 4;
+
+    // Two draw palettes. "night" is a red night-vision scheme: every canvas
+    // colour shifts to dark red so dark-adapted eyes keep working in the field.
+    // The page chrome is dimmed separately via the body.night-vision CSS filter.
+    var PALETTE = {
+        day: {
+            grid: 'rgba(255,255,255,0.07)',
+            ecliptic: 'rgba(250,204,21,0.55)',
+            constellation: 'rgba(129,140,248,0.55)',
+            constellationLabel: 'rgba(165,180,252,0.85)',
+            starNamed: '#f8fafc',
+            star: '#cbd5e1',
+            starLabel: 'rgba(203,213,225,0.9)',
+            selected: '#ffffff',
+            planetLabel: 'rgba(253,224,71,0.95)',
+            planetLabelBelow: 'rgba(148,163,184,0.8)',
+            planets: {
+                sun: '#fde047', moon: '#bfdbfe', mars: '#fca5a5',
+                jupiter: '#fed7aa', saturn: '#fed7aa', other: '#fde68a'
+            }
+        },
+        night: {
+            grid: 'rgba(255,0,0,0.10)',
+            ecliptic: 'rgba(220,38,38,0.75)',
+            constellation: 'rgba(185,28,28,0.80)',
+            constellationLabel: 'rgba(239,68,68,0.90)',
+            starNamed: '#ff6b6b',
+            star: '#a83232',
+            starLabel: 'rgba(248,113,113,0.85)',
+            selected: '#ff4d4d',
+            planetLabel: 'rgba(239,68,68,0.95)',
+            planetLabelBelow: 'rgba(127,29,29,0.9)',
+            planets: {
+                sun: '#ff3b30', moon: '#c93a3a', mars: '#e03131',
+                jupiter: '#f2615a', saturn: '#f2615a', other: '#ef4444'
+            }
+        }
+    };
+
+    function palette() {
+        return (showNightModeCb && showNightModeCb.checked)
+            ? PALETTE.night
+            : PALETTE.day;
+    }
 
     // Bodies the engine can compute, keyed by the name returned by the API.
     var BODY_BY_NAME = {
@@ -271,7 +316,7 @@
             var p = projectRaDec(state.selectedObject.ra, state.selectedObject.dec);
             ctx.beginPath();
             ctx.arc(p.x, p.y, 8, 0, 2 * Math.PI);
-            ctx.strokeStyle = '#ffffff';
+            ctx.strokeStyle = palette().selected;
             ctx.lineWidth = 2;
             ctx.stroke();
         }
@@ -279,7 +324,7 @@
     }
 
     function drawGrid(w, h) {
-        ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+        ctx.strokeStyle = palette().grid;
         ctx.lineWidth = 1;
         for (var ra = 0; ra < 360; ra += 15) {
             var p = projectRaDec(ra, 0);
@@ -299,7 +344,7 @@
 
     /** Ecliptic polyline: convert ecliptic longitude 0..360 to RA/Dec. */
     function drawEcliptic(w, h) {
-        ctx.strokeStyle = 'rgba(250,204,21,0.55)';
+        ctx.strokeStyle = palette().ecliptic;
         ctx.lineWidth = 1.5;
         ctx.setLineDash([6, 6]);
         ctx.beginPath();
@@ -327,7 +372,7 @@
      * 0/360 boundary so no line is drawn straight across the canvas.
      */
     function drawConstellations() {
-        ctx.strokeStyle = 'rgba(129,140,248,0.55)';
+        ctx.strokeStyle = palette().constellation;
         ctx.lineWidth = 1;
         ctx.beginPath();
         for (var i = 0; i < state.constellations.length; i++) {
@@ -392,7 +437,7 @@
             if (!constellation._label) continue;
             var p = projectRaDec(constellation._label.ra, constellation._label.dec);
             if (p.x < 40 || p.y < 20 || p.x > size.w - 40 || p.y > size.h - 20) continue;
-            ctx.fillStyle = 'rgba(165,180,252,0.85)';
+            ctx.fillStyle = palette().constellationLabel;
             ctx.fillText(constellation.name, p.x, p.y);
         }
         ctx.restore();
@@ -415,11 +460,11 @@
             var named = !!s.name;
             ctx.beginPath();
             ctx.arc(p.x, p.y, r, 0, 2 * Math.PI);
-            ctx.fillStyle = named ? '#f8fafc' : '#cbd5e1';
+            ctx.fillStyle = named ? palette().starNamed : palette().star;
             ctx.fill();
 
             if (showNames && named && r > 1.4) {
-                ctx.fillStyle = 'rgba(203,213,225,0.9)';
+                ctx.fillStyle = palette().starLabel;
                 ctx.font = '11px system-ui, sans-serif';
                 ctx.fillText(s.name, p.x + r + 3, p.y + 4);
             }
@@ -428,11 +473,12 @@
 
     function planetColor(name) {
         var key = String(name || '').toLowerCase();
-        if (key === 'sun') return '#fde047';
-        if (key === 'moon') return '#bfdbfe';
-        if (key === 'mars') return '#fca5a5';
-        if (key === 'jupiter' || key === 'saturn') return '#fed7aa';
-        return '#fde68a';
+        var p = palette().planets;
+        if (key === 'sun') return p.sun;
+        if (key === 'moon') return p.moon;
+        if (key === 'mars') return p.mars;
+        if (key === 'jupiter' || key === 'saturn') return p.jupiter;
+        return p.other;
     }
 
     /** Planets, Sun and Moon via astronomy-engine; dimmed when below horizon. */
@@ -461,7 +507,7 @@
             ctx.globalAlpha = 1;
 
             if (showNames) {
-                ctx.fillStyle = below ? 'rgba(148,163,184,0.8)' : 'rgba(253,224,71,0.95)';
+                ctx.fillStyle = below ? palette().planetLabelBelow : palette().planetLabel;
                 ctx.font = '12px system-ui, sans-serif';
                 ctx.fillText(planet.name, p.x + r + 4, p.y + 4);
             }
@@ -836,6 +882,25 @@
         .forEach(function (cb) {
             if (cb) cb.addEventListener('change', render);
         });
+
+    // Night mode is a preference worth keeping across reloads: nobody wants to
+    // re-enable it (and blast their dark adaptation) on every page visit.
+    function applyNightMode() {
+        var on = !!(showNightModeCb && showNightModeCb.checked);
+        document.body.classList.toggle('night-vision', on);
+        try {
+            localStorage.setItem('sb-night-mode', on ? '1' : '0');
+        } catch (err) { /* storage blocked (private mode): keep the choice in-session */ }
+        render();
+    }
+
+    if (showNightModeCb) {
+        try {
+            showNightModeCb.checked = localStorage.getItem('sb-night-mode') === '1';
+        } catch (err) { /* storage blocked: start in day mode */ }
+        document.body.classList.toggle('night-vision', showNightModeCb.checked);
+        showNightModeCb.addEventListener('change', applyNightMode);
+    }
 
     Array.prototype.forEach.call(dirBtns, function (btn) {
         btn.addEventListener('click', function () {

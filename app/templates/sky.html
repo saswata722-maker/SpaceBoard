@@ -18,6 +18,16 @@
             }}
         }
     </script>
+    <style>
+        /* Night-vision mode: the chrome is shifted to dark red so the (bright)
+           sidebar and nav do not destroy dark-adapted eyes while observing.
+           The canvas uses its own red palette — see PALETTE in sky.js. */
+        body.night-vision nav,
+        body.night-vision aside,
+        body.night-vision footer {
+            filter: brightness(0.45) sepia(1) hue-rotate(-28deg) saturate(2.6);
+        }
+    </style>
 </head>
 <body class="bg-space-900 text-gray-100 min-h-screen flex flex-col">
     <nav class="bg-space-800 border-b border-gray-700">
@@ -153,6 +163,10 @@
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" id="show-names" checked class="w-4 h-4 rounded border-gray-600 bg-space-700 text-blue-500 focus:ring-blue-500">
                         <span class="text-sm text-gray-300">Star names</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="show-nightmode" class="w-4 h-4 rounded border-gray-600 bg-space-700 text-red-500 focus:ring-red-500">
+                        <span class="text-sm text-red-300">Night mode (red)</span>
                     </label>
                 </div>
             </div>
