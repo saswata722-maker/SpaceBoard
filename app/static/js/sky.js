@@ -175,7 +175,7 @@
         while (dRa > 180) dRa -= 360;
         while (dRa < -180) dRa += 360;
         var dDec = dec - state.centerDec;
-        var scale = PIXELS_PER_DEG * (state.fovDeg / 180);
+        var scale = PIXELS_PER_DEG * (180 / state.fovDeg);
         var size = cssSize();
         return { x: size.w / 2 + dRa * scale, y: size.h / 2 - dDec * scale };
     }
@@ -653,7 +653,7 @@
         var p = pointerXY(event);
 
         if (state.dragging) {
-            var scale = PIXELS_PER_DEG * (state.fovDeg / 180);
+            var scale = PIXELS_PER_DEG * (180 / state.fovDeg);
             state.centerRa = ((state.centerRa - (p.x - state.dragX) / scale) % 360 + 360) % 360;
             state.centerDec = Math.max(-90, Math.min(90, state.centerDec + (p.y - state.dragY) / scale));
             state.dragX = p.x;
@@ -718,7 +718,7 @@
         var rect = canvas.getBoundingClientRect();
         var x = event.touches[0].clientX - rect.left;
         var y = event.touches[0].clientY - rect.top;
-        var scale = PIXELS_PER_DEG * (state.fovDeg / 180);
+        var scale = PIXELS_PER_DEG * (180 / state.fovDeg);
         state.centerRa = ((state.centerRa - (x - state.dragX) / scale) % 360 + 360) % 360;
         state.centerDec = Math.max(-90, Math.min(90, state.centerDec + (y - state.dragY) / scale));
         state.dragX = x;
