@@ -125,7 +125,7 @@ def get_bodies(is_planet=None):
             SOLAR_SYSTEM_BASE_URL,
             params={"data": FIELDS},
             headers=_headers(),
-            timeout=15,
+            timeout=6,
         )
         response.raise_for_status()
         payload = response.json()
@@ -189,7 +189,7 @@ def get_body(body_id):
     """
     try:
         url = f"{SOLAR_SYSTEM_BASE_URL}/{body_id}"
-        response = requests.get(url, timeout=15)
+        response = requests.get(url, timeout=6)
         response.raise_for_status()
         return _ok(response.json())
     except requests.exceptions.Timeout:
