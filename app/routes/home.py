@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, request
 
 from app.api.apod import get_apod
 
@@ -23,5 +23,6 @@ def favicon():
 @home_bp.route("/")
 def index():
     """Home page displaying NASA's Astronomy Picture of the Day."""
-    result = get_apod()
-    return render_template("home.html", apod=result["data"], error=result["error"])
+    date = request.args.get("date")
+    result = get_apod(date)
+    return render_template("home.html", apod=result["data"], error=result["error"], apod_date=date or "")
