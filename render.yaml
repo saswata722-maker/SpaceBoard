@@ -1,0 +1,33 @@
+# Render blueprint — https://render.com/docs/blueprint-spec
+# One-click deploy: New > Blueprint, then point Render at this repository.
+#
+# Render reads this file on the first deploy; afterwards the dashboard settings
+# win. Runtime is native Python (no Docker build step needed).
+
+services:
+  - type: web
+    name: spaceboard
+    runtime: python
+    plan: free
+    region: oregon
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120"
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.4"
+      # Populated in the Render dashboard, not here — never commit real keys.
+      - key: NASA_API_KEY
+        sync: false
+      - key: SOLAR_SYSTEM_API_KEY
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: FLASK_ENV
+        value: production
+      # SimpleCache is per-process; a single free-tier instance is fine.
+      # For multi-worker deploys switch to FileSystemCache (Dockerfile sets the volume).
+      - key: CACHE_TYPE
+        value: SimpleCache
+      - key: CACHE_DEFAULT_TIMEOUT
+        value: "3600"

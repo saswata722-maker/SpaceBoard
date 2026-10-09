@@ -38,4 +38,14 @@ class Config:
     FLASK_ENV = _env("FLASK_ENV", "development")
     CACHE_TYPE = _env("CACHE_TYPE", "SimpleCache")
     CACHE_DEFAULT_TIMEOUT = int(_env("CACHE_DEFAULT_TIMEOUT", "3600"))
+    CACHE_DIR = _env("CACHE_DIR")
+
+    @property
+    def is_production(self):
+        """True when running as a public deployment rather than local dev."""
+        return self.FLASK_ENV.strip().lower() in {
+            "production",
+            "prod",
+            "staging",
+        }
 

@@ -1,0 +1,13 @@
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      # Overrides whatever .env sets, so the container is always production-shaped.
+      FLASK_ENV: production
+      CACHE_TYPE: SimpleCache
+      CACHE_DEFAULT_TIMEOUT: "3600"
+    restart: unless-stopped
