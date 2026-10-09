@@ -15,23 +15,26 @@ SpaceBoard/
 │   │
 │   ├── routes/                    # Flask routes/blueprints, one per section
 │   │   ├── __init__.py
-│   │   ├── home.py                # / - Home landing view
-│   │   ├── asteroids.py           # /asteroids/ - Asteroids table view
+│   │   ├── home.py                # / - Home landing view (APOD preview)
+│   │   ├── asteroids.py           # /asteroids/ - Asteroids table & /asteroids/<id> detail
 │   │   ├── planets.py             # /planets/ - Solar system planets & exoplanets
-│   │   ├── stars.py               # /stars/ - APOD stars archive & gallery
 │   │   └── sky.py                 # /sky/ - Sky map & /sky/api/planet-positions
 │   │
 │   ├── templates/                 # Jinja2 HTML templates
 │   │   ├── base.html              # Shared layout + Tailwind CDN script tag
 │   │   ├── home.html
 │   │   ├── asteroids.html
+│   │   ├── asteroid_detail.html   # Single asteroid view
 │   │   ├── planets.html
-│   │   ├── stars.html
+│   │   ├── planet_detail.html     # Single planet view
+│   │   ├── exoplanet_detail.html  # Single exoplanet view
 │   │   ├── sky.html               # Canvas planisphere container & control aside
 │   │   ├── 404.html
 │   │   └── 500.html
 │   │
-│   ├── static/                    # JS, static datasets, images (Tailwind via CDN)
+│   ├── static/                    # CSS, JS, static datasets, images (Tailwind via CDN)
+│   │   ├── css/
+│   │   │   └── style.css          # Glassmorphism design system, animations, night mode
 │   │   ├── data/
 │   │   │   ├── constellations.json# Segment lines for major constellations
 │   │   │   └── stars.json         # Hipparcos star catalog (mag <= 4.5)
@@ -41,11 +44,6 @@ SpaceBoard/
 │   │   │   └── sky.js             # 2D canvas renderer & ephemeris interaction
 │   │   └── images/
 │   │
-│   └── utils/                     # Helper functions (formatting, date logic, etc.)
-│       ├── __init__.py
-│       ├── format_date.py
-│       └── hazard_color.py
-│
 ├── tests/                         # Unit & integration test suites
 │   ├── __init__.py
 │   ├── conftest.py                # Pytest fixtures
@@ -60,8 +58,15 @@ SpaceBoard/
 ├── .env.example                   # Template for required environment variables
 ├── .gitignore
 ├── config.py                      # App configuration (API keys, cache settings)
-├── requirements.txt               # Flask, requests, Flask-Caching, python-dotenv, pytest
-├── run.py                         # Entry point to start the Flask app
+├── requirements.txt               # Runtime dependencies (incl. gunicorn)
+├── requirements-dev.txt           # Test dependencies (pytest)
+├── run.py                         # Local development server entry point
+├── wsgi.py                        # Production WSGI entry point (gunicorn wsgi:app)
+├── Dockerfile                     # Container image definition
+├── docker-entrypoint.sh           # Container entrypoint (PORT expansion, exec gunicorn)
+├── docker-compose.yml             # Local container orchestration
+├── render.yaml                    # Render deployment blueprint
+├── LICENSE                        # MIT license text
 ├── README.md
 └── PROJECT_STRUCTURE.md
 ```
@@ -70,13 +75,21 @@ SpaceBoard/
 
 - **`app/api/`** — keeps all `requests` calls to NASA and OpenData endpoints isolated here. Each function catches failures (timeouts, rate limits, bad responses) and returns a consistent fallback shape rather than raising, so routes/templates can show a friendly "unavailable" state.
 - **`app/cache.py`** — configures Flask-Caching (SimpleCache backend, ~1 hour default TTL). Route handlers or `app/api/` functions are decorated with `@cache.cached(...)` or `@cache.memoize(...)` to avoid re-hitting NASA's API for the same data within the TTL window.
-- **`app/routes/`** — one Flask Blueprint per section (`home`, `asteroids`, `planets`, `stars`, `sky`), registered in `app/__init__.py`.
+- **`app/routes/`** — one Flask Blueprint per section (`home`, `asteroids`, `planets`, `sky`), registered in `app/__init__.py`.
 - **`app/templates/`** — Jinja2 templates. `base.html` holds shared layout (nav/footer) and loads Tailwind via a CDN `<script>` tag — no Node/npm build step required. Other pages extend it.
+- **`app/static/css/`** — the glassmorphism design system; loaded once by `base.html` (and `sky.html`) to keep component markup readable.
 - **`app/static/data/`** — astronomical datasets (`stars.json` with Hipparcos catalog data and `constellations.json` with segment geometry).
 - **`app/static/js/`** — vanilla JS modules (`main.js`, `sky.js`, `planet-tonight.js`) consuming `astronomy-engine` directly in browser.
-- **`app/utils/`** — small pure functions (date formatting, hazard-level color mapping, etc.) with no side effects.
-- **`config.py`** — loads environment variables (NASA API key, debug mode, cache settings) using `python-dotenv`.
+- **`config.py`** — loads environment variables (NASA API key, debug mode, cache settings) using `python-dotenv`, treating template placeholders as unset so documented fallbacks still apply.
+- **`wsgi.py`** — production WSGI entry point used by gunicorn; kept separate from `run.py` so the Werkzeug debugger can never be enabled by a production start command.
 - **`tests/`** — comprehensive unit and integration tests covering routes, API clients, caching, celestial calculations, and template/JS contracts.
+
+## Deployment Notes
+
+- **WSGI entry point**: `wsgi:app` (gunicorn / uWSGI / mod_wsgi).
+- **Local dev**: `python run.py` — add `FLASK_DEBUG=1` to `.env` to enable the debugger explicitly.
+- **Container**: `Dockerfile` + `docker-entrypoint.sh` build a non-root image; the entrypoint expands `$PORT` and `exec`s gunicorn so the master process is PID 1 and receives `SIGTERM` for graceful shutdown.
+- **Caching caveat**: `SimpleCache` is per-process in-memory. Fine for a single instance; switch to `FileSystemCache` or Redis when scaling past one process.
 
 ## Naming Conventions
 
