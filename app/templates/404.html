@@ -3,10 +3,10 @@
 {% block title %}404 — Page Not Found{% endblock %}
 
 {% block content %}
-<div class="text-center py-20">
-    <h1 class="text-6xl font-bold mb-4">404</h1>
+<div class="text-center py-20 animate-fade-in-up">
+    <h1 class="text-6xl md:text-7xl font-bold mb-4 bg-gradient-to-r from-blue-400 via-purple-400 to-cyan-300 bg-clip-text text-transparent">404</h1>
     <p class="text-xl text-gray-400 mb-8">This page drifted into deep space.</p>
-    <a href="{{ url_for('home.index') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-3 rounded-lg transition">
+    <a href="{{ url_for('home.index') }}" class="glass-btn-primary inline-block">
         Return Home
     </a>
 </div>

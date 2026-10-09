@@ -3,111 +3,112 @@
 {% block title %}Planets — SpaceBoard{% endblock %}
 
 {% block content %}
-<div class="mb-8">
-    <h1 class="text-3xl font-bold mb-2">Planets</h1>
+<div class="mb-8 animate-fade-in-up">
+    <h1 class="text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-white via-gray-200 to-blue-300 bg-clip-text text-transparent">Planets</h1>
     <p class="text-gray-400">Solar system planets and a searchable exoplanet database</p>
 </div>
 
-<section class="mb-12">
+<section class="mb-12 animate-fade-in-up stagger-1">
     <h2 class="text-2xl font-semibold mb-4">Solar System</h2>
     {% if ss_note %}
-        <div class="bg-amber-900/40 border border-amber-600 text-amber-100 rounded-lg p-4 mb-4 text-sm">
+        <div class="glass-card bg-amber-900/20 border-amber-600/40 text-amber-100 mb-4 text-sm">
             {{ ss_note }}
         </div>
     {% endif %}
     {% if solar_planets %}
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {% for planet in solar_planets %}
-            <div class="bg-space-800 rounded-xl p-5 shadow-lg hover:bg-space-700 transition">
-                <h3 class="text-lg font-bold text-white mb-2">
+            <a href="{{ url_for('planets.planet_detail', body_id=planet.id) }}"
+               class="planet-card block group">
+                <h3 class="text-lg font-bold text-white mb-3 flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-blue-400 group-hover:scale-125 transition-transform"></span>
                     {% if planet.nameEnglish %}{{ planet.nameEnglish }}{% else %}{{ planet.name }}{% endif %}
                 </h3>
-                <dl class="text-sm text-gray-300 space-y-1">
+                <dl class="text-sm text-gray-300 space-y-1.5">
                     {% if planet.massMassValue is not none %}
-                        <div class="flex justify-between"><dt class="text-gray-400">Mass</dt><dd>{{ planet.massMassValue }}&times;10<sup>{{ planet.massExp }}</sup> kg</dd></div>
+                        <div class="flex justify-between"><dt class="text-gray-400">Mass</dt><dd class="font-mono">{{ planet.massMassValue }}&times;10<sup>{{ planet.massExp }}</sup> kg</dd></div>
                     {% endif %}
                     {% if planet.radiusMean is not none %}
-                        <div class="flex justify-between"><dt class="text-gray-400">Radius</dt><dd>{{ "%.0f"|format(planet.radiusMean) }} km</dd></div>
+                        <div class="flex justify-between"><dt class="text-gray-400">Radius</dt><dd class="font-mono">{{ "%.0f"|format(planet.radiusMean) }} km</dd></div>
                     {% endif %}
                     {% if planet.gravity is not none %}
-                        <div class="flex justify-between"><dt class="text-gray-400">Gravity</dt><dd>{{ planet.gravity }} m/s&sup2;</dd></div>
+                        <div class="flex justify-between"><dt class="text-gray-400">Gravity</dt><dd class="font-mono">{{ planet.gravity }} m/s&sup2;</dd></div>
                     {% endif %}
                     {% if planet.orbitalPeriod is not none %}
-                        <div class="flex justify-between"><dt class="text-gray-400">Orbital Period</dt><dd>{{ "%.1f"|format(planet.orbitalPeriod) }} days</dd></div>
+                        <div class="flex justify-between"><dt class="text-gray-400">Orbital Period</dt><dd class="font-mono">{{ "%.1f"|format(planet.orbitalPeriod) }} days</dd></div>
                     {% endif %}
                     {% if planet.moons is not none %}
-                        <div class="flex justify-between"><dt class="text-gray-400">Moons</dt><dd>{{ planet.moons | length }}</dd></div>
+                        <div class="flex justify-between"><dt class="text-gray-400">Moons</dt><dd class="font-mono">{{ planet.moons | length }}</dd></div>
                     {% endif %}
                     {% if planet.discoveredBy %}
                         <div class="flex justify-between"><dt class="text-gray-400">Discovered By</dt><dd>{{ planet.discoveredBy }}</dd></div>
                     {% endif %}
                 </dl>
                 {% if planet.nameEnglish %}
-                <div class="planet-tonight mt-4 pt-3 border-t border-gray-700 text-sm text-gray-400"
+                <div class="planet-tonight mt-4 pt-3 border-t border-gray-700/50 text-xs text-gray-400"
                      data-planet="{{ planet.nameEnglish }}">Calculating tonight&rsquo;s position&hellip;</div>
                 {% endif %}
-            </div>
+            </a>
             {% endfor %}
         </div>
     {% else %}
-        <div class="bg-space-800 rounded-lg p-6 text-center text-gray-400"><p>No planet data available.</p></div>
+        <div class="glass-card text-center text-gray-400"><p>No planet data available.</p></div>
     {% endif %}
 </section>
 
-<section>
+<section class="animate-fade-in-up stagger-2">
     <h2 class="text-2xl font-semibold mb-4">Exoplanets</h2>
-    <form method="GET" class="bg-space-800 rounded-xl p-4 mb-6 shadow-lg">
+    <form method="GET" class="glass-card mb-6">
         <div class="flex flex-col sm:flex-row gap-3">
             <input type="text" name="search" value="{{ search }}"
                    placeholder="Search by planet or host star (e.g. Kepler, Trappist)..."
-                   class="flex-1 bg-space-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                   class="glass-input flex-1">
             <label for="method" class="sr-only">Discovery method</label>
-            <select id="method" name="method"
-                    class="bg-space-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <select id="method" name="method" class="glass-input sm:w-56 text-sm">
                 <option value="">All discovery methods</option>
                 {% for m in methods %}
                 <option value="{{ m }}" {% if m == selected_method %}selected{% endif %}>{{ m }}</option>
                 {% endfor %}
             </select>
-            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2 rounded-lg transition">Search</button>
+            <button type="submit" class="glass-btn-primary whitespace-nowrap">Search</button>
             {% if search or selected_method %}
-            <a href="{{ url_for('planets.index') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium px-6 py-2 rounded-lg transition text-center">Clear</a>
+            <a href="{{ url_for('planets.index') }}" class="glass-btn-secondary whitespace-nowrap text-center">Clear</a>
             {% endif %}
         </div>
     </form>
     {% if exo_error %}
-        <div class="bg-red-900/50 border border-red-500 text-red-200 rounded-lg p-6 text-center">
+        <div class="glass-card bg-red-900/20 border-red-500/30 text-red-200">
             <p class="font-semibold mb-1">Data Unavailable</p>
             <p class="text-sm">{{ exo_error }}</p>
         </div>
     {% elif exoplanets %}
         <p class="text-sm text-gray-400 mb-4">{{ exoplanets | length }} exoplanet(s) found</p>
-        <div class="bg-space-800 rounded-xl overflow-hidden shadow-lg">
+        <div class="glass-panel overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
-                    <thead class="bg-space-700 text-gray-300">
+                    <thead class="glass-subtle text-gray-300">
                         <tr>
-                            <th class="px-4 py-3 text-left">Name</th>
-                            <th class="px-4 py-3 text-left">Host Star</th>
-                            <th class="px-4 py-3 text-left">Disc. Method</th>
-                            <th class="px-4 py-3 text-left">Year</th>
-                            <th class="px-4 py-3 text-left">Period (d)</th>
-                            <th class="px-4 py-3 text-left">Radius (R&#x2295;)</th>
-                            <th class="px-4 py-3 text-left">Mass (M&#x2295;)</th>
-                            <th class="px-4 py-3 text-left">Temp (K)</th>
+                            <th class="px-4 py-3 text-left font-medium">Name</th>
+                            <th class="px-4 py-3 text-left font-medium">Host Star</th>
+                            <th class="px-4 py-3 text-left font-medium">Disc. Method</th>
+                            <th class="px-4 py-3 text-left font-medium">Year</th>
+                            <th class="px-4 py-3 text-left font-medium">Period (d)</th>
+                            <th class="px-4 py-3 text-left font-medium">Radius (R&#x2295;)</th>
+                            <th class="px-4 py-3 text-left font-medium">Mass (M&#x2295;)</th>
+                            <th class="px-4 py-3 text-left font-medium">Temp (K)</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-700">
+                    <tbody class="divide-y divide-gray-700/50">
                         {% for p in exoplanets %}
-                        <tr class="hover:bg-space-700/50 transition">
-                            <td class="px-4 py-3 font-medium">{{ p.pl_name }}</td>
+                        <tr class="hover:bg-white/5 transition cursor-pointer" onclick="window.location='{{ url_for('planets.exoplanet_detail', pl_name=p.pl_name) }}'">
+                            <td class="px-4 py-3 font-medium text-blue-400">{{ p.pl_name }}</td>
                             <td class="px-4 py-3">{{ p.hostname }}</td>
                             <td class="px-4 py-3">{{ p.discoverymethod }}</td>
-                            <td class="px-4 py-3">{{ p.disc_year }}</td>
-                            <td class="px-4 py-3">{% if p.pl_orbper is not none %}{{"%.1f"|format(p.pl_orbper)}}{% else %}—{% endif %}</td>
-                            <td class="px-4 py-3">{% if p.pl_rade is not none %}{{"%.2f"|format(p.pl_rade)}}{% else %}—{% endif %}</td>
-                            <td class="px-4 py-3">{% if p.pl_bmasse is not none %}{{"%.1f"|format(p.pl_bmasse)}}{% else %}—{% endif %}</td>
-                            <td class="px-4 py-3">{% if p.pl_eqt is not none %}{{"%.0f"|format(p.pl_eqt)}}{% else %}—{% endif %}</td>
+                            <td class="px-4 py-3 font-mono">{{ p.disc_year }}</td>
+                            <td class="px-4 py-3 font-mono">{% if p.pl_orbper is not none %}{{"%.1f"|format(p.pl_orbper)}}{% else %}—{% endif %}</td>
+                            <td class="px-4 py-3 font-mono">{% if p.pl_rade is not none %}{{"%.2f"|format(p.pl_rade)}}{% else %}—{% endif %}</td>
+                            <td class="px-4 py-3 font-mono">{% if p.pl_bmasse is not none %}{{"%.1f"|format(p.pl_bmasse)}}{% else %}—{% endif %}</td>
+                            <td class="px-4 py-3 font-mono">{% if p.pl_eqt is not none %}{{"%.0f"|format(p.pl_eqt)}}{% else %}—{% endif %}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -115,7 +116,7 @@
             </div>
         </div>
     {% else %}
-        <div class="bg-space-800 rounded-lg p-6 text-center text-gray-400">
+        <div class="glass-card text-center text-gray-400">
             <p>{% if search %}No exoplanets found matching "{{ search }}".{% else %}No exoplanet data available.{% endif %}</p>
         </div>
     {% endif %}

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20100%20100'%3E%3Cpolygon%20points='50,5%2061,35%2095,35%2068,57%2079,90%2050,70%2021,90%2032,57%205,35%2039,35'%20fill='%23fbbf24'/%3E%3C/svg%3E">
     <title>{% block title %}SpaceBoard{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -23,31 +24,34 @@
         }
     </script>
 </head>
-<body class="bg-space-900 text-gray-100 min-h-screen flex flex-col">
-    <nav class="bg-space-800 border-b border-gray-700">
+<body class="bg-space-900 text-gray-100 min-h-screen flex flex-col starfield-bg">
+    <nav class="nav-glass sticky top-0 z-50">
         <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-            <a href="{{ url_for('home.index') }}" class="text-xl font-bold text-white tracking-tight">
-                🌌 SpaceBoard
+            <a href="{{ url_for('home.index') }}" class="flex items-center gap-3 text-xl font-bold text-white tracking-tight glass-btn-ghost px-3 py-2 rounded-xl group">
+                <span class="relative">
+                    <svg class="w-8 h-8 text-amber-400 group-hover:rotate-12 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                </span>
+                SpaceBoard
             </a>
             <button id="nav-toggle" class="md:hidden text-gray-300 hover:text-white" aria-label="Toggle navigation">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                 </svg>
             </button>
-            <div id="nav-links" class="hidden md:flex space-x-6">
-                <a href="{{ url_for('home.index') }}" class="text-gray-300 hover:text-white transition">Home</a>
-                <a href="{{ url_for('asteroids.index') }}" class="text-gray-300 hover:text-white transition">Asteroids</a>
-                <a href="{{ url_for('planets.index') }}" class="text-gray-300 hover:text-white transition">Planets</a>
-                <a href="{{ url_for('stars.index') }}" class="text-gray-300 hover:text-white transition">Stars</a>
-                <a href="{{ url_for('sky.index') }}" class="text-blue-400 font-medium hover:text-white transition">Sky Map</a>
+<div id="nav-links" class="hidden md:flex space-x-4">
+                <a href="{{ url_for('home.index') }}" class="glass-btn-ghost px-4 py-2 rounded-lg text-sm">Home</a>
+                <a href="{{ url_for('asteroids.index') }}" class="glass-btn-ghost px-4 py-2 rounded-lg text-sm">Asteroids</a>
+                <a href="{{ url_for('planets.index') }}" class="glass-btn-ghost px-4 py-2 rounded-lg text-sm">Planets</a>
+                <a href="{{ url_for('sky.index') }}" class="glass-btn-primary px-4 py-2 rounded-lg text-sm font-medium">Sky Map</a>
             </div>
         </div>
         <div id="nav-mobile" class="hidden md:hidden px-4 pb-4 space-y-2">
-            <a href="{{ url_for('home.index') }}" class="block text-gray-300 hover:text-white transition">Home</a>
-            <a href="{{ url_for('asteroids.index') }}" class="block text-gray-300 hover:text-white transition">Asteroids</a>
-            <a href="{{ url_for('planets.index') }}" class="block text-gray-300 hover:text-white transition">Planets</a>
-            <a href="{{ url_for('stars.index') }}" class="block text-gray-300 hover:text-white transition">Stars</a>
-            <a href="{{ url_for('sky.index') }}" class="block text-blue-400 font-medium hover:text-white transition">Sky Map</a>
+            <a href="{{ url_for('home.index') }}" class="glass-btn-ghost px-4 py-2 rounded-lg block text-sm">Home</a>
+            <a href="{{ url_for('asteroids.index') }}" class="glass-btn-ghost px-4 py-2 rounded-lg block text-sm">Asteroids</a>
+            <a href="{{ url_for('planets.index') }}" class="glass-btn-ghost px-4 py-2 rounded-lg block text-sm">Planets</a>
+            <a href="{{ url_for('sky.index') }}" class="glass-btn-primary px-4 py-2 rounded-lg block text-sm font-medium">Sky Map</a>
         </div>
     </nav>
 
@@ -55,7 +59,7 @@
         {% block content %}{% endblock %}
     </main>
 
-    <footer class="bg-space-800 border-t border-gray-700 py-4 text-center text-gray-500 text-sm">
+    <footer class="glass-subtle border-t border-gray-700/50 py-4 text-center text-gray-500 text-sm">
         <p>SpaceBoard — Data provided by <a href="https://api.nasa.gov/" class="text-blue-400 hover:underline" target="_blank" rel="noopener">NASA Open APIs</a></p>
     </footer>
 
