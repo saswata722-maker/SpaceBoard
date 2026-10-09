@@ -1,0 +1,19 @@
+# Local credentials must never be baked into an image layer. Docker does not
+# read .gitignore, so .env would be copied in by the plain `COPY . .`.
+.env
+.env.*
+!.env.example
+
+# VCS history and editor/tool state. .kilo also holds additional full copies
+# of this repository under .kilo/worktrees.
+.git
+.gitignore
+.kilo/
+
+# Build and test artifacts.
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
