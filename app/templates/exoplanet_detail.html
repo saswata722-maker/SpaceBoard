@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}{{ planet.pl_name }} — SpaceBoard{% endblock %}
+
+{% block content %}
+<a href="{{ url_for('planets.index') }}" class="back-link mb-6 animate-fade-in">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+    Back to Planets
+</a>
+
+<div class="mb-8 animate-fade-in-up">
+    <h1 class="text-3xl md:text-4xl font-bold mb-2">{{ planet.pl_name }}</h1>
+    <p class="text-gray-400">Exoplanet — NASA Exoplanet Archive data</p>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Main details -->
+    <div class="lg:col-span-2 space-y-6">
+        <div class="detail-section animate-fade-in-up stagger-1">
+            <h2 class="detail-section-title purple">Host Star &amp; Discovery</h2>
+            <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {% if planet.hostname %}
+                <div class="glass-subtle rounded-xl p-4">
+                    <dt class="text-sm text-gray-400">Host Star</dt>
+                    <dd class="text-white">{{ planet.hostname }}</dd>
+                </div>
+                {% endif %}
+                {% if planet.discoverymethod %}
+                <div class="glass-subtle rounded-xl p-4">
+                    <dt class="text-sm text-gray-400">Discovery Method</dt>
+                    <dd class="text-white">{{ planet.discoverymethod }}</dd>
+                </div>
+                {% endif %}
+                {% if planet.disc_year %}
+                <div class="glass-subtle rounded-xl p-4">
+                    <dt class="text-sm text-gray-400">Discovery Year</dt>
+                    <dd class="text-white font-mono">{{ planet.disc_year }}</dd>
+                </div>
+                {% endif %}
+                {% if planet.sy_snum %}
+                <div class="glass-subtle rounded-xl p-4">
+                    <dt class="text-sm text-gray-400">Stars in System</dt>
+                    <dd class="text-white font-mono">{{ planet.sy_snum }}</dd>
+                </div>
+                {% endif %}
+                {% if planet.sy_pnum %}
+                <div class="glass-subtle rounded-xl p-4">
+                    <dt class="text-sm text-gray-400">Planets in System</dt>
+                    <dd class="text-white font-mono">{{ planet.sy_pnum }}</dd>
+                </div>
+                {% endif %}
+                {% if planet.st_spectype %}
+                <div class="glass-subtle rounded-xl p-4">
+                    <dt class="text-sm text-gray-400">Spectral Type</dt>
+                    <dd class="text-white font-mono">{{ planet.st_spectype }}</dd>
+                </div>
+                {% endif %}
+            </dl>
+        </div>
+
+        <div class="detail-section animate-fade-in-up stagger-2">
+            <h2 class="detail-section-title cyan">Orbital &amp; Physical Properties</h2>
+            <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {% if planet.pl_orbper is not none %}
+                <div class="glass-subtle rounded-xl p-4">
+                    <dt class="text-sm text-gray-400">Orbital Period</dt>
+                    <dd class="text-white font-mono">{{ "%.2f"|format(planet.pl_orbper) }} days</dd>
+                </div>
+                {% endif %}
+                {% if planet.pl_orbsmax is not none %}
+                <div class="glass-subtle rounded-xl p-4">
+                    <dt class="text-sm text-gray-400">Semi-Major Axis</dt>
+                    <dd class="text-white font-mono">{{ "%.4f"|format(planet.pl_orbsmax) }} AU</dd>
+                </div>
+                {% endif %}
+                {% if planet.pl_rade is not none %}
+                <div class="glass-subtle rounded-xl p-4">
+                    <dt class="text-sm text-gray-400">Radius (Earth)</dt>
+                    <dd class="text-white font-mono">{{ "%.2f"|format(planet.pl_rade) }} R&#x2295;</dd>
+                </div>
+                {% endif %}
+                {% if planet.pl_radj is not none %}
+                <div class="glass-subtle rounded-xl p-4">
+                    <dt class="text-sm text-gray-400">Radius (Jupiter)</dt>
+                    <dd class="text-white font-mono">{{ "%.3f"|format(planet.pl_radj) }} R&#x2295;</dd>
+                </div>
+                {% endif %}
+                {% if planet.pl_bmasse is not none %}
+                <div class="glass-subtle rounded-xl p-4">
+                    <dt class="text-sm text-gray-400">Mass (Earth)</dt>
+                    <dd class="text-white font-mono">{{ "%.2f"|format(planet.pl_bmasse) }} M&#x2295;</dd>
+                </div>
+                {% endif %}
+                {% if planet.pl_bmassj is not none %}
+                <div class="glass-subtle rounded-xl p-4">
+                    <dt class="text-sm text-gray-400">Mass (Jupiter)</dt>
+                    <dd class="text-white font-mono">{{ "%.4f"|format(planet.pl_bmassj) }} M&#x2295;</dd>
+                </div>
+                {% endif %}
+                {% if planet.pl_eqt is not none %}
+                <div class="glass-subtle rounded-xl p-4">
+                    <dt class="text-sm text-gray-400">Equilibrium Temperature</dt>
+                    <dd class="text-white font-mono">{{ "%.0f"|format(planet.pl_eqt) }} K</dd>
+                </div>
+                {% endif %}
+                {% if planet.pl_dens is not none %}
+                <div class="glass-subtle rounded-xl p-4">
+                    <dt class="text-sm text-gray-400">Density</dt>
+                    <dd class="text-white font-mono">{{ "%.2f"|format(planet.pl_dens) }} g/cm&sup3;</dd>
+                </div>
+                {% endif %}
+            </dl>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="space-y-6">
+        <div class="detail-section animate-fade-in-up stagger-3">
+            <h2 class="detail-section-title emerald">Overview</h2>
+            <dl class="space-y-3">
+                <div class="flex justify-between">
+                    <dt class="text-sm text-gray-400">Planet Name</dt>
+                    <dd class="text-white">{{ planet.pl_name }}</dd>
+                </div>
+            </dl>
+        </div>
+    </div>
+</div>
+{% endblock %}

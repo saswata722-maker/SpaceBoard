@@ -410,3 +410,134 @@ def test_planets_route_ignores_unknown_method(
     client.get("/planets/?method=Definitely+Not+A+Method")
 
     assert mock_get_exoplanets.call_args[1].get("discovery") is None
+
+
+# ---------------------------------------------------------------------------
+# Planet detail route
+# ---------------------------------------------------------------------------
+
+@patch("app.routes.planets.get_body")
+def test_planet_detail_route_success(mock_get_body, client):
+    mock_get_body.return_value = {
+        "ok": True,
+        "data": {
+            "id": "terre",
+            "name": "Terre",
+            "nameEnglish": "Earth",
+            "isPlanet": True,
+            "massMassValue": 5.97,
+            "massExp": 24,
+            "radiusMean": 6371.0,
+            "gravity": 9.81,
+            "semimajorAxis": 149598023,
+            "eccentricity": 0.0167,
+            "inclination": 0.0,
+            "orbitalPeriod": 365.25,
+            "moons": [{"moon": "Lune"}],
+            "discoveredBy": None,
+        },
+        "error": None,
+    }
+    response = client.get("/planets/terre")
+    assert response.status_code == 200
+    html = response.data.decode()
+    assert "Earth" in html
+    assert "Physical Properties" in html
+    assert "Lune" in html
+
+
+@patch("app.routes.planets.get_body")
+def test_planet_detail_route_not_found_redirects(mock_get_body, client):
+    mock_get_body.return_value = {"ok": False, "data": None, "error": "not found"}
+    response = client.get("/planets/unknown-body", follow_redirects=True)
+    assert response.status_code == 200
+    assert b"Back to Planets" in response.data or b"Planets" in response.data
+
+
+# ---------------------------------------------------------------------------
+# Exoplanet detail route
+# ---------------------------------------------------------------------------
+
+@patch("app.routes.planets.get_exoplanet")
+def test_exoplanet_detail_route_success(mock_get_exoplanet, client):
+    mock_get_exoplanet.return_value = {
+        "ok": True,
+        "data": {
+            "pl_name": "Kepler-22 b",
+            "hostname": "Kepler-22",
+            "discoverymethod": "Transit",
+            "disc_year": 2011,
+            "pl_orbper": 289.86,
+            "pl_orbsmax": 0.849,
+            "pl_rade": 2.38,
+            "pl_radj": 0.212,
+            "pl_bmasse": 9.1,
+            "pl_bmassj": 0.029,
+            "pl_eqt": 279.0,
+            "pl_dens": 2.4,
+            "st_spectype": "G5V",
+            "sy_snum": 1,
+            "sy_pnum": 1,
+        },
+        "error": None,
+    }
+    response = client.get("/planets/exoplanet/Kepler-22%20b")
+    assert response.status_code == 200
+    html = response.data.decode()
+    assert "Kepler-22 b" in html
+    assert "Host Star" in html
+    assert "Kepler-22" in html
+
+
+@patch("app.routes.planets.get_exoplanet")
+def test_exoplanet_detail_route_not_found_redirects(mock_get_exoplanet, client):
+    mock_get_exoplanet.return_value = {"ok": False, "data": None, "error": "not found"}
+    response = client.get("/planets/exoplanet/Nonexistent-99%20z", follow_redirects=True)
+    assert response.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# Asteroid detail route
+# ---------------------------------------------------------------------------
+
+@patch("app.routes.asteroids.get_neo")
+def test_asteroid_detail_route_success(mock_get_neo, client):
+    mock_get_neo.return_value = {
+        "ok": True,
+        "data": {
+            "id": "12345",
+            "name": "(2024 AB)",
+            "nasa_jpl_url": "https://ssd.jpl.nasa.gov/sbdb.cgi?sstr=12345",
+            "absolute_magnitude_h": 22.1,
+            "estimated_diameter": {
+                "kilometers": {
+                    "estimated_diameter_min": 0.1,
+                    "estimated_diameter_max": 0.3,
+                }
+            },
+            "is_potentially_hazardous_asteroid": False,
+            "close_approach_data": [
+                {
+                    "close_approach_date": "2024-01-15",
+                    "relative_velocity": {"kilometers_per_hour": "50000"},
+                    "miss_distance": {"kilometers": "3000000"},
+                    "orbiting_body": "Earth",
+                }
+            ],
+        },
+        "error": None,
+    }
+    response = client.get("/asteroids/12345")
+    assert response.status_code == 200
+    html = response.data.decode()
+    assert "(2024 AB)" in html
+    assert "Close Approaches" in html
+    assert "2024-01-15" in html
+    assert "Earth" in html
+
+
+@patch("app.routes.asteroids.get_neo")
+def test_asteroid_detail_route_not_found_redirects(mock_get_neo, client):
+    mock_get_neo.return_value = {"ok": False, "data": None, "error": "not found"}
+    response = client.get("/asteroids/99999999", follow_redirects=True)
+    assert response.status_code == 200

@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}{{ planet.nameEnglish or planet.name }} — SpaceBoard{% endblock %}
+
+{% block content %}
+<a href="{{ url_for('planets.index') }}" class="back-link mb-6 animate-fade-in">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+    Back to Planets
+</a>
+
+<div class="mb-8 animate-fade-in-up">
+    <h1 class="text-3xl md:text-4xl font-bold mb-2">
+        {{ planet.nameEnglish or planet.name }}
+        {% if planet.name and planet.name != planet.nameEnglish %}
+            <span class="text-lg text-gray-400 font-normal">({{ planet.name }})</span>
+        {% endif %}
+    </h1>
+    <p class="text-gray-400">Solar system body — detailed properties</p>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Key stats -->
+    <div class="lg:col-span-2 space-y-6">
+        <div class="detail-section animate-fade-in-up stagger-1">
+            <h2 class="detail-section-title blue">Physical Properties</h2>
+            <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {% if planet.massMassValue is not none %}
+                <div class="glass-subtle rounded-xl p-4">
+                    <dt class="text-sm text-gray-400">Mass</dt>
+                    <dd class="text-white font-mono">{{ planet.massMassValue }}&times;10<sup>{{ planet.massExp }}</sup> kg</dd>
+                </div>
+                {% endif %}
+                {% if planet.radiusMean is not none %}
+                <div class="glass-subtle rounded-xl p-4">
+                    <dt class="text-sm text-gray-400">Mean Radius</dt>
+                    <dd class="text-white font-mono">{{ "%.0f"|format(planet.radiusMean) }} km</dd>
+                </div>
+                {% endif %}
+                {% if planet.gravity is not none %}
+                <div class="glass-subtle rounded-xl p-4">
+                    <dt class="text-sm text-gray-400">Surface Gravity</dt>
+                    <dd class="text-white font-mono">{{ planet.gravity }} m/s&sup2;</dd>
+                </div>
+                {% endif %}
+                {% if planet.semimajorAxis is not none %}
+                <div class="glass-subtle rounded-xl p-4">
+                    <dt class="text-sm text-gray-400">Semi-Major Axis</dt>
+                    <dd class="text-white font-mono">{{ "{:,}".format(planet.semimajorAxis|float) }} km</dd>
+                </div>
+                {% endif %}
+                {% if planet.eccentricity is not none %}
+                <div class="glass-subtle rounded-xl p-4">
+                    <dt class="text-sm text-gray-400">Eccentricity</dt>
+                    <dd class="text-white font-mono">{{ planet.eccentricity }}</dd>
+                </div>
+                {% endif %}
+                {% if planet.inclination is not none %}
+                <div class="glass-subtle rounded-xl p-4">
+                    <dt class="text-sm text-gray-400">Inclination</dt>
+                    <dd class="text-white font-mono">{{ planet.inclination }}&deg;</dd>
+                </div>
+                {% endif %}
+            </dl>
+        </div>
+
+        <!-- Orbital info -->
+        <div class="detail-section animate-fade-in-up stagger-2">
+            <h2 class="detail-section-title purple">Orbital Information</h2>
+            <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {% if planet.orbitalPeriod is not none %}
+                <div class="glass-subtle rounded-xl p-4">
+                    <dt class="text-sm text-gray-400">Orbital Period</dt>
+                    <dd class="text-white font-mono">{{ "%.2f"|format(planet.orbitalPeriod) }} days</dd>
+                </div>
+                {% endif %}
+                {% if planet.discoveredBy %}
+                <div class="glass-subtle rounded-xl p-4">
+                    <dt class="text-sm text-gray-400">Discovered By</dt>
+                    <dd class="text-white">{{ planet.discoveredBy }}</dd>
+                </div>
+                {% endif %}
+            </dl>
+        </div>
+
+        <!-- Moons -->
+        <div class="detail-section animate-fade-in-up stagger-3">
+            <h2 class="detail-section-title cyan">
+                Moons
+                <span class="text-sm text-gray-400 font-normal ml-2">{{ planet.moons | length if planet.moons else 0 }}</span>
+            </h2>
+            {% if planet.moons %}
+                <ul class="divide-y divide-gray-700/50">
+                    {% for moon in planet.moons %}
+                    <li class="py-2.5 text-gray-300">
+                        {% if moon.moon %}{{ moon.moon }}{% else %}Unnamed moon{% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-gray-500 text-sm">This body has no known moons.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="space-y-6">
+        <div class="detail-section animate-fade-in-up stagger-4">
+            <h2 class="detail-section-title emerald">Overview</h2>
+            <dl class="space-y-3">
+                {% if planet.isPlanet is not none %}
+                <div class="flex justify-between">
+                    <dt class="text-sm text-gray-400">Classification</dt>
+                    <dd class="text-white">{% if planet.isPlanet %}<span class="badge badge-blue">Planet</span>{% else %}<span class="badge badge-gray">Non-planet</span>{% endif %}</dd>
+                </div>
+                {% endif %}
+                <div class="flex justify-between">
+                    <dt class="text-sm text-gray-400">Body ID</dt>
+                    <dd class="text-white font-mono text-sm">{{ planet.id }}</dd>
+                </div>
+            </dl>
+        </div>
+    </div>
+</div>
+{% endblock %}

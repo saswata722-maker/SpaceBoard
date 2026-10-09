@@ -257,3 +257,92 @@ def test_get_exoplanets_unknown_discovery_is_ignored(mock_get):
     # never be interpolated, so no injection clause may survive.
     assert "discoverymethod = 'Transit' OR '1'='1'" not in query, query
     assert "OR" not in query
+
+
+# ---------------------------------------------------------------------------
+# get_exoplanet() — single-planet lookup
+# ---------------------------------------------------------------------------
+
+from app.api.exoplanets import get_exoplanet
+
+
+@patch("app.api.exoplanets.requests.get")
+def test_get_exoplanet_success(mock_get):
+    """A single planet row must be returned, not wrapped in a list."""
+    mock_get.return_value = _mock_response([SAMPLE_EXOPLANETS[0]])
+
+    app = _app()
+    with app.app_context():
+        from app.cache import cache
+
+        cache.clear()
+        result = get_exoplanet("Kepler-22 b")
+
+    assert result["ok"] is True
+    assert result["error"] is None
+    assert result["data"]["pl_name"] == "Kepler-22 b"
+
+
+@patch("app.api.exoplanets.requests.get")
+def test_get_exoplanet_not_found_returns_none(mock_get):
+    """An empty list means the planet doesn't exist; data must be None."""
+    mock_get.return_value = _mock_response([])
+
+    app = _app()
+    with app.app_context():
+        from app.cache import cache
+
+        cache.clear()
+        result = get_exoplanet("Nonexistent-99 z")
+
+    assert result["ok"] is True
+    assert result["data"] is None
+
+
+@patch("app.api.exoplanets.requests.get")
+def test_get_exoplanet_timeout(mock_get):
+    mock_get.side_effect = Timeout("Connection timed out")
+
+    app = _app()
+    with app.app_context():
+        from app.cache import cache
+
+        cache.clear()
+        result = get_exoplanet("Kepler-22 b")
+
+    assert result["ok"] is False
+    assert "timed out" in result["error"]
+
+
+@patch("app.api.exoplanets.requests.get")
+def test_get_exoplanet_rate_limit(mock_get):
+    mock_get.return_value = _mock_response([], status_code=429)
+
+    app = _app()
+    with app.app_context():
+        from app.cache import cache
+
+        cache.clear()
+        result = get_exoplanet("Kepler-22 b")
+
+    assert result["ok"] is False
+    assert "rate limit" in result["error"].lower()
+
+
+@patch("app.api.exoplanets.requests.get")
+def test_get_exoplanet_sql_injection_guard(mock_get):
+    """Single-quote escaping must survive the exact-name lookup path."""
+    mock_get.return_value = _mock_response([])
+
+    app = _app()
+    with app.app_context():
+        from app.cache import cache
+
+        cache.clear()
+        get_exoplanet("Bob' OR '1'='1")
+
+    query = mock_get.call_args[1]["params"]["query"]
+    # The escaped quote must appear, and no bare OR clause may survive.
+    assert "''" in query
+    assert "OR '1'='1'" not in query
+    assert "default_flag = 1" in query

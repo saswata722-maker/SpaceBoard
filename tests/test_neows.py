@@ -174,3 +174,114 @@ def test_get_neo_feed_empty_response(mock_get):
     assert result["ok"] is True
     assert result["data"]["neos"] == []
     assert result["data"]["element_count"] == 0
+
+
+# ---------------------------------------------------------------------------
+# get_neo() — single-NEO lookup
+# ---------------------------------------------------------------------------
+
+from app.api.neows import get_neo
+
+
+SAMPLE_NEO_DETAIL = {
+    "id": "12345",
+    "name": "(2024 AB)",
+    "nasa_jpl_url": "https://ssd.jpl.nasa.gov/sbdb.cgi?sstr=12345",
+    "absolute_magnitude_h": 22.1,
+    "estimated_diameter": {
+        "kilometers": {
+            "estimated_diameter_min": 0.1,
+            "estimated_diameter_max": 0.3,
+        }
+    },
+    "is_potentially_hazardous_asteroid": False,
+    "close_approach_data": [
+        {
+            "close_approach_date": "2024-01-15",
+            "relative_velocity": {"kilometers_per_hour": "50000"},
+            "miss_distance": {"kilometers": "3000000"},
+            "orbiting_body": "Earth",
+        }
+    ],
+}
+
+
+@patch("app.api.neows.requests.get")
+def test_get_neo_success(mock_get):
+    """A single NEO lookup must return the full record."""
+    mock_get.return_value = _mock_response(SAMPLE_NEO_DETAIL)
+
+    app = _app()
+    with app.app_context():
+        from app.cache import cache
+
+        cache.clear()
+        result = get_neo("12345")
+
+    assert result["ok"] is True
+    assert result["error"] is None
+    assert result["data"]["id"] == "12345"
+    assert result["data"]["name"] == "(2024 AB)"
+    assert result["data"]["close_approach_data"][0]["orbiting_body"] == "Earth"
+
+
+@patch("app.api.neows.requests.get")
+def test_get_neo_uses_lookup_url_not_feed(mock_get):
+    """The detail lookup must hit the /neo/{id} endpoint, not the feed."""
+    mock_get.return_value = _mock_response(SAMPLE_NEO_DETAIL)
+
+    app = _app()
+    with app.app_context():
+        from app.cache import cache
+
+        cache.clear()
+        get_neo("12345")
+
+    url = mock_get.call_args[0][0]
+    assert "/neo/12345" in url, f"expected lookup URL, got {url}"
+    assert "/feed" not in url
+
+
+@patch("app.api.neows.requests.get")
+def test_get_neo_timeout(mock_get):
+    mock_get.side_effect = Timeout("Connection timed out")
+
+    app = _app()
+    with app.app_context():
+        from app.cache import cache
+
+        cache.clear()
+        result = get_neo("12345")
+
+    assert result["ok"] is False
+    assert "timed out" in result["error"]
+
+
+@patch("app.api.neows.requests.get")
+def test_get_neo_rate_limit(mock_get):
+    mock_get.return_value = _mock_response({}, status_code=429)
+
+    app = _app()
+    with app.app_context():
+        from app.cache import cache
+
+        cache.clear()
+        result = get_neo("12345")
+
+    assert result["ok"] is False
+    assert "rate limit" in result["error"].lower()
+
+
+@patch("app.api.neows.requests.get")
+def test_get_neo_404(mock_get):
+    mock_get.return_value = _mock_response({}, status_code=404)
+
+    app = _app()
+    with app.app_context():
+        from app.cache import cache
+
+        cache.clear()
+        result = get_neo("99999999")
+
+    assert result["ok"] is False
+    assert "404" in result["error"]

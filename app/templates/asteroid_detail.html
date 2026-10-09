@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}{{ neo.name }} — SpaceBoard{% endblock %}
+
+{% block content %}
+<a href="{{ url_for('asteroids.index') }}" class="back-link mb-6 animate-fade-in">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+    Back to Asteroids
+</a>
+
+<div class="mb-8 animate-fade-in-up">
+    <h1 class="text-3xl md:text-4xl font-bold mb-2">{{ neo.name }}</h1>
+    <p class="text-gray-400">Near-Earth Object — NASA NeoWs data</p>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Main details -->
+    <div class="lg:col-span-2 space-y-6">
+        <div class="detail-section animate-fade-in-up stagger-1">
+            <h2 class="detail-section-title amber">Physical Properties</h2>
+            <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="glass-subtle rounded-xl p-4">
+                    <dt class="text-sm text-gray-400">NASA ID</dt>
+                    <dd class="text-white font-mono">{{ neo.id }}</dd>
+                </div>
+                {% if neo.absolute_magnitude_h is not none %}
+                <div class="glass-subtle rounded-xl p-4">
+                    <dt class="text-sm text-gray-400">Absolute Magnitude (H)</dt>
+                    <dd class="text-white font-mono">{{ neo.absolute_magnitude_h }}</dd>
+                </div>
+                {% endif %}
+                <div class="glass-subtle rounded-xl p-4">
+                    <dt class="text-sm text-gray-400">Hazard Status</dt>
+                    <dd class="mt-1">
+                        {% if neo.is_potentially_hazardous_asteroid %}
+                            <span class="badge badge-amber">Potentially Hazardous</span>
+                        {% else %}
+                            <span class="badge badge-emerald">Safe</span>
+                        {% endif %}
+                    </dd>
+                </div>
+                {% if neo.estimated_diameter and neo.estimated_diameter.kilometers %}
+                <div class="glass-subtle rounded-xl p-4 sm:col-span-2">
+                    <dt class="text-sm text-gray-400">Estimated Diameter (km)</dt>
+                    <dd class="text-white font-mono">
+                        {{ "%.2f"|format(neo.estimated_diameter.kilometers.estimated_diameter_min) }}
+                        – {{ "%.2f"|format(neo.estimated_diameter.kilometers.estimated_diameter_max) }}
+                    </dd>
+                </div>
+                {% endif %}
+            </dl>
+        </div>
+
+        <!-- Close approaches -->
+        <div class="detail-section animate-fade-in-up stagger-2">
+            <h2 class="detail-section-title cyan">
+                Close Approaches
+                <span class="text-sm text-gray-400 font-normal ml-2">
+                    ({{ neo.close_approach_data | length if neo.close_approach_data else 0 }})
+                </span>
+            </h2>
+            {% if neo.close_approach_data %}
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="glass-subtle text-gray-300">
+                            <tr>
+                                <th class="px-4 py-3 text-left font-medium">Date</th>
+                                <th class="px-4 py-3 text-left font-medium">Body</th>
+                                <th class="px-4 py-3 text-left font-medium">Miss Distance</th>
+                                <th class="px-4 py-3 text-left font-medium">Velocity</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-700/50">
+                            {% for ca in neo.close_approach_data %}
+                            <tr>
+                                <td class="px-4 py-3">{{ ca.close_approach_date }}</td>
+                                <td class="px-4 py-3">{{ ca.orbiting_body or '—' }}</td>
+                                <td class="px-4 py-3 font-mono">
+                                    {% if ca.miss_distance and ca.miss_distance.kilometers %}
+                                        {{ "{:,}".format(ca.miss_distance.kilometers|float) }} km
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+                                <td class="px-4 py-3 font-mono">
+                                    {% if ca.relative_velocity and ca.relative_velocity.kilometers_per_hour %}
+                                        {{ "{:,}".format(ca.relative_velocity.kilometers_per_hour|float) }} km/h
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-gray-500 text-sm">No close approach data available.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="space-y-6">
+        <div class="detail-section animate-fade-in-up stagger-3">
+            <h2 class="detail-section-title emerald">Overview</h2>
+            <dl class="space-y-3">
+                <div class="flex justify-between">
+                    <dt class="text-sm text-gray-400">Name</dt>
+                    <dd class="text-white">{{ neo.name }}</dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="text-sm text-gray-400">NASA ID</dt>
+                    <dd class="text-white font-mono text-sm">{{ neo.id }}</dd>
+                </div>
+                {% if neo.nasa_jpl_url %}
+                <div>
+                    <dt class="text-sm text-gray-400">JPL Small-Body DB</dt>
+                    <dd>
+                        <a href="{{ neo.nasa_jpl_url }}" target="_blank" rel="noopener"
+                           class="text-blue-400 hover:underline text-sm">Open &rarr;</a>
+                    </dd>
+                </div>
+                {% endif %}
+            </dl>
+        </div>
+    </div>
+</div>
+{% endblock %}
