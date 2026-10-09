@@ -22,7 +22,7 @@
     };
 
     // Used until (or unless) the browser grants geolocation access.
-    var FALLBACK = { latitude: 40.7128, longitude: -74.0060, label: 'New York' };
+    var FALLBACK = { latitude: 0, longitude: 0, label: 'Equator/Prime Meridian' };
 
     var COMPASS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE',
                    'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];

@@ -35,6 +35,7 @@
     var locateBtn = document.getElementById('locate-btn');
     var zoomSlider = document.getElementById('zoom-slider');
     var zoomLevel = document.getElementById('zoom-level');
+    var projectionSelect = document.getElementById('projection-select');
     var centerRah = document.getElementById('center-rah');
     var centerExt = document.getElementById('center-ext');
     var centerAlt = document.getElementById('center-alt');
@@ -56,6 +57,9 @@
     var DEG = Math.PI / 180;
     var RAD = 180 / Math.PI;
     var PIXELS_PER_DEG = 4;
+
+    // Projection type: 'stereographic' (default, best for planispheres) or 'orthographic'
+    var PROJECTION_TYPE = 'stereographic';
 
     // Two draw palettes. "night" is a red night-vision scheme: every canvas
     // colour shifts to dark red so dark-adapted eyes keep working in the field.
@@ -110,7 +114,7 @@
 
     var state = {
         stars: [], constellations: [], planets: [],
-        lat: 40.7128, lon: -74.0060,
+        lat: 0, lon: 0,
         utcTime: new Date(),
         centerRa: 0, centerDec: 45,
         fovDeg: 180,
@@ -171,13 +175,88 @@
     window.addEventListener('resize', resizeCanvas);
 
     function projectRaDec(ra, dec) {
-        var dRa = ra - state.centerRa;
-        while (dRa > 180) dRa -= 360;
-        while (dRa < -180) dRa += 360;
-        var dDec = dec - state.centerDec;
-        var scale = PIXELS_PER_DEG * (180 / state.fovDeg);
+        // Stereographic projection from the celestial sphere to the plane.
+        // Center of projection is at (state.centerRa, state.centerDec).
+        // RA axis is MIRRORED so East is on the LEFT (standard planisphere convention).
+        var ra0 = state.centerRa * DEG;
+        var dec0 = state.centerDec * DEG;
+        var ra1 = ra * DEG;
+        var dec1 = dec * DEG;
+
+        var cosDec1 = Math.cos(dec1);
+        var sinDec1 = Math.sin(dec1);
+        var cosDec0 = Math.cos(dec0);
+        var sinDec0 = Math.sin(dec0);
+        var cosDra = Math.cos(ra1 - ra0);
+        var sinDra = Math.sin(ra1 - ra0);
+
+        // For stereographic: k = 2 / (1 + sin(dec0)*sin(dec1) + cos(dec0)*cos(dec1)*cos(dra))
+        // For orthographic: k = cos(dec1)*sin(dra) for x, cos(dec1)*cos(dra) for y
+        // Orthographic is limited to hemisphere (k > 0)
+
+        var x, y;
+        if (PROJECTION_TYPE === 'orthographic') {
+            var cosC = sinDec0 * sinDec1 + cosDec0 * cosDec1 * cosDra;
+            if (cosC <= 0) return null; // behind the limb
+            x = cosDec1 * sinDra;
+            y = cosDec0 * sinDec1 - sinDec0 * cosDec1 * cosDra;
+        } else {
+            // Stereographic projection
+            var k = 2 / (1 + sinDec0 * sinDec1 + cosDec0 * cosDec1 * cosDra);
+            x = k * cosDec1 * sinDra;
+            y = k * (cosDec0 * sinDec1 - sinDec0 * cosDec1 * cosDra);
+        }
+
+        // Scale factor: at 180° FOV, the full hemisphere fits in min(w,h)
+        var scale = PIXELS_PER_DEG * (180 / state.fovDeg) * (180 / Math.PI);
         var size = cssSize();
-        return { x: size.w / 2 + dRa * scale, y: size.h / 2 - dDec * scale };
+
+        // MIRROR RA: East is LEFT (negative x in standard math, but positive RA is East)
+        // In stereographic, +x = East. We want East on LEFT, so flip x.
+        return { x: size.w / 2 - x * scale, y: size.h / 2 - y * scale };
+    }
+
+    /**
+     * Inverse projection: screen (x, y) -> (ra, dec) in degrees.
+     * Used for dragging: convert mouse movement to RA/Dec change.
+     */
+    function inverseProject(x, y) {
+        var size = cssSize();
+        var scale = PIXELS_PER_DEG * (180 / state.fovDeg) * (180 / Math.PI);
+
+        // Undo the mirror and centering
+        var xp = (size.w / 2 - x) / scale;
+        var yp = (size.h / 2 - y) / scale;
+
+        var ra0 = state.centerRa * DEG;
+        var dec0 = state.centerDec * DEG;
+        var cosDec0 = Math.cos(dec0);
+        var sinDec0 = Math.sin(dec0);
+
+        var ra, dec;
+        if (PROJECTION_TYPE === 'orthographic') {
+            // Orthographic inverse
+            var rho = Math.hypot(xp, yp);
+            if (rho > 1) return null; // outside the projection
+            var c = Math.asin(rho);
+            var sinC = Math.sin(c);
+            var cosC = Math.cos(c);
+            dec = Math.asin(cosC * sinDec0 + yp * sinC * cosDec0 / rho);
+            ra = ra0 + Math.atan2(xp * sinC, rho * cosC * cosDec0 - yp * sinC * sinDec0);
+        } else {
+            // Stereographic inverse
+            var rho = Math.hypot(xp, yp);
+            var c = 2 * Math.atan(rho / 2);
+            var sinC = Math.sin(c);
+            var cosC = Math.cos(c);
+            dec = Math.asin(cosC * sinDec0 + yp * sinC * cosDec0 / (rho || 1));
+            ra = ra0 + Math.atan2(xp * sinC, rho * cosC * cosDec0 - yp * sinC * sinDec0);
+        }
+
+        ra = (ra * RAD) % 360;
+        if (ra < 0) ra += 360;
+        dec = dec * RAD;
+        return { ra: ra, dec: dec };
     }
 
     // ------------------------------------------------------------------ data
@@ -305,7 +384,10 @@
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, size.w, size.h);
 
-        if (showGridCb && showGridCb.checked) drawGrid(size.w, size.h);
+        if (showGridCb && showGridCb.checked) {
+            drawGrid(size.w, size.h);
+            drawCompassLabels(size.w, size.h);
+        }
         if (showEclipticCb && showEclipticCb.checked) drawEcliptic(size.w, size.h);
         if (showConstellationsCb && showConstellationsCb.checked) drawConstellations();
         drawStars(size.w, size.h);
@@ -314,11 +396,13 @@
 
         if (state.selectedObject) {
             var p = projectRaDec(state.selectedObject.ra, state.selectedObject.dec);
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, 8, 0, 2 * Math.PI);
-            ctx.strokeStyle = palette().selected;
-            ctx.lineWidth = 2;
-            ctx.stroke();
+            if (p) {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 8, 0, 2 * Math.PI);
+                ctx.strokeStyle = palette().selected;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
         }
         updateCenterInfo();
     }
@@ -328,18 +412,44 @@
         ctx.lineWidth = 1;
         for (var ra = 0; ra < 360; ra += 15) {
             var p = projectRaDec(ra, 0);
-            ctx.beginPath();
-            ctx.moveTo(p.x, 0);
-            ctx.lineTo(p.x, h);
-            ctx.stroke();
+            if (p) {
+                ctx.beginPath();
+                ctx.moveTo(p.x, 0);
+                ctx.lineTo(p.x, h);
+                ctx.stroke();
+            }
         }
         for (var dec = -75; dec <= 75; dec += 15) {
             var q = projectRaDec(0, dec);
-            ctx.beginPath();
-            ctx.moveTo(0, q.y);
-            ctx.lineTo(w, q.y);
-            ctx.stroke();
+            if (q) {
+                ctx.beginPath();
+                ctx.moveTo(0, q.y);
+                ctx.lineTo(w, q.y);
+                ctx.stroke();
+            }
         }
+    }
+
+    /** Draw N/S/E/W compass labels at the cardinal points of the projection. */
+    function drawCompassLabels(w, h) {
+        var dirs = [
+            { name: 'N', ra: 0, dec: 90 },
+            { name: 'S', ra: 180, dec: -90 },
+            { name: 'E', ra: 90, dec: 0 },
+            { name: 'W', ra: 270, dec: 0 }
+        ];
+        ctx.save();
+        ctx.font = '12px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = palette().grid;
+        for (var i = 0; i < dirs.length; i++) {
+            var p = projectRaDec(dirs[i].ra, dirs[i].dec);
+            if (p && p.x > 15 && p.x < w - 15 && p.y > 15 && p.y < h - 15) {
+                ctx.fillText(dirs[i].name, p.x, p.y);
+            }
+        }
+        ctx.restore();
     }
 
     /** Ecliptic polyline: convert ecliptic longitude 0..360 to RA/Dec. */
@@ -355,6 +465,10 @@
             var ra = Math.atan2(Math.sin(l) * Math.cos(obliquity), Math.cos(l)) * RAD;
             var dec = Math.asin(Math.sin(l) * Math.sin(obliquity)) * RAD;
             var p = projectRaDec(ra, dec);
+            if (!p) {
+                last = null;
+                continue;
+            }
             if (last === null || Math.abs(p.x - last.x) > w / 2) {
                 ctx.moveTo(p.x, p.y);
             } else {
@@ -382,6 +496,10 @@
                 var previousRa = null;
                 for (var k = 0; k < pts.length; k++) {
                     var p = projectRaDec(pts[k][0], pts[k][1]);
+                    if (!p) {
+                        previousRa = null;
+                        continue;
+                    }
                     if (previousRa === null || Math.abs(pts[k][0] - previousRa) > 180) {
                         ctx.moveTo(p.x, p.y);
                     } else {
@@ -436,6 +554,7 @@
             }
             if (!constellation._label) continue;
             var p = projectRaDec(constellation._label.ra, constellation._label.dec);
+            if (!p) continue;
             if (p.x < 40 || p.y < 20 || p.x > size.w - 40 || p.y > size.h - 20) continue;
             ctx.fillStyle = palette().constellationLabel;
             ctx.fillText(constellation.name, p.x, p.y);
@@ -454,6 +573,7 @@
         for (var i = 0; i < state.stars.length; i++) {
             var s = state.stars[i];
             var p = projectRaDec(s.ra, s.dec);
+            if (!p) continue;
             if (p.x < -20 || p.y < -20 || p.x > w + 20 || p.y > h + 20) continue;
 
             var r = starRadius(s.mag);
@@ -493,6 +613,7 @@
             if (!pos) continue;
 
             var p = projectRaDec(pos.ra, pos.dec);
+            if (!p) continue;
             if (p.x < -30 || p.y < -30 || p.x > size.w + 30 || p.y > size.h + 30) continue;
 
             var below = pos.alt <= 0;
@@ -531,6 +652,7 @@
         for (var i = 0; i < state.stars.length; i++) {
             var s = state.stars[i];
             var p = projectRaDec(s.ra, s.dec);
+            if (!p) continue;
             var d = Math.hypot(p.x - x, p.y - y);
             if (d < bestDist) {
                 bestDist = d;
@@ -653,9 +775,12 @@
         var p = pointerXY(event);
 
         if (state.dragging) {
-            var scale = PIXELS_PER_DEG * (180 / state.fovDeg);
-            state.centerRa = ((state.centerRa - (p.x - state.dragX) / scale) % 360 + 360) % 360;
-            state.centerDec = Math.max(-90, Math.min(90, state.centerDec + (p.y - state.dragY) / scale));
+            var start = inverseProject(state.dragX, state.dragY);
+            var end = inverseProject(p.x, p.y);
+            if (start && end) {
+                state.centerRa = ((state.centerRa + (start.ra - end.ra)) % 360 + 360) % 360;
+                state.centerDec = Math.max(-90, Math.min(90, state.centerDec + (end.dec - start.dec)));
+            }
             state.dragX = p.x;
             state.dragY = p.y;
             state.dragMoved += 1;
@@ -718,9 +843,12 @@
         var rect = canvas.getBoundingClientRect();
         var x = event.touches[0].clientX - rect.left;
         var y = event.touches[0].clientY - rect.top;
-        var scale = PIXELS_PER_DEG * (180 / state.fovDeg);
-        state.centerRa = ((state.centerRa - (x - state.dragX) / scale) % 360 + 360) % 360;
-        state.centerDec = Math.max(-90, Math.min(90, state.centerDec + (y - state.dragY) / scale));
+        var start = inverseProject(state.dragX, state.dragY);
+        var end = inverseProject(x, y);
+        if (start && end) {
+            state.centerRa = ((state.centerRa + (start.ra - end.ra)) % 360 + 360) % 360;
+            state.centerDec = Math.max(-90, Math.min(90, state.centerDec + (end.dec - start.dec)));
+        }
         state.dragX = x;
         state.dragY = y;
         render();
@@ -877,6 +1005,13 @@
         zoomLevel.textContent = state.fovDeg + '\u00b0';
         render();
     });
+
+    if (projectionSelect) {
+        projectionSelect.addEventListener('change', function () {
+            PROJECTION_TYPE = projectionSelect.value;
+            render();
+        });
+    }
 
     [showPlanetsCb, showEclipticCb, showGridCb, showNamesCb, showConstellationsCb]
         .forEach(function (cb) {
