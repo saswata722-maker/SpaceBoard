@@ -48,6 +48,25 @@ def _search_condition(search_term):
 
 
 @cache.memoize(timeout=3600)
+def _fetch_exoplanets_cached(query):
+    """Fetch exoplanets and return raw JSON on success; raise on failure."""
+    params = {"query": query, "format": "json"}
+    response = requests.get(EXOPLANET_TAP_URL, params=params, timeout=20)
+    response.raise_for_status()
+    data = response.json()
+    if not isinstance(data, list):
+        raise ValueError("Unexpected response format from Exoplanet Archive.")
+    return data
+
+
+@cache.memoize(timeout=3600)
+def _fetch_exoplanet_cached(pl_name):
+    """Fetch a single exoplanet by exact name and return raw JSON on success; raise on failure."""
+    safe_name = pl_name.replace("'", "''")  # basic SQL injection guard
+    query = f"select top 1 * from ps where pl_name = '{safe_name}' and default_flag = 1"
+    return _fetch_exoplanets_cached(query)
+
+
 def get_exoplanets(search=None, discovery=None, limit=200):
     """Fetch confirmed exoplanets from the NASA Exoplanet Archive.
 
@@ -70,15 +89,37 @@ def get_exoplanets(search=None, discovery=None, limit=200):
         where = "where " + " and ".join(conditions)
         query = f"select top {limit} {_COLUMNS} from ps {where}"
 
-        params = {"query": query, "format": "json"}
-        response = requests.get(EXOPLANET_TAP_URL, params=params, timeout=20)
-        response.raise_for_status()
-
-        data = response.json()
-        if not isinstance(data, list):
-            return _fail("Unexpected response format from Exoplanet Archive.")
-
+        data = _fetch_exoplanets_cached(query)
         return _ok(data)
+    except requests.exceptions.Timeout:
+        return _fail("The request to the NASA Exoplanet Archive timed out.")
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 429:
+            return _fail("Exoplanet Archive rate limit exceeded. Please wait and try again.")
+        return _fail(
+            f"Exoplanet Archive returned an error (HTTP {e.response.status_code})."
+        )
+    except requests.exceptions.RequestException as e:
+        return _fail(f"Could not reach NASA Exoplanet Archive: {str(e)}")
+    except Exception as e:
+        return _fail(f"Unexpected error fetching exoplanet data: {str(e)}")
+
+
+def get_exoplanet(pl_name):
+    """Fetch a single exoplanet by its exact planet name.
+
+    Args:
+        pl_name: The planet name as it appears in the Archive (e.g. "Kepler-186 f").
+
+    Returns:
+        dict: {"ok": bool, "data": dict|None, "error": str|None}
+              data is the single planet row (or None if not found).
+    """
+    try:
+        data = _fetch_exoplanet_cached(pl_name)
+        if not data:
+            return _ok(None)
+        return _ok(data[0])
     except requests.exceptions.Timeout:
         return _fail("The request to the NASA Exoplanet Archive timed out.")
     except requests.exceptions.HTTPError as e:

@@ -33,21 +33,22 @@ def _normalise(body):
         mass.massValue / mass.massExponent → massMassValue / massExp
         meanRadius    → radiusMean
         sideralOrbit  → orbitalPeriod
-    """
+    Also handles already-normalised field names (for single-body endpoint)."""
     mass = body.get("mass") or {}
+    # Support both upstream and already-normalised field names
     return {
         "id":               body.get("id"),
         "name":             body.get("name"),
-        "nameEnglish":      body.get("englishName"),
+        "nameEnglish":      body.get("englishName") or body.get("nameEnglish"),
         "isPlanet":         body.get("isPlanet"),
-        "massMassValue":    mass.get("massValue"),
-        "massExp":          mass.get("massExponent"),
-        "radiusMean":       body.get("meanRadius"),
+        "massMassValue":    mass.get("massValue") or body.get("massMassValue"),
+        "massExp":          mass.get("massExponent") or body.get("massExp"),
+        "radiusMean":       body.get("meanRadius") or body.get("radiusMean"),
         "gravity":          body.get("gravity"),
         "semimajorAxis":    body.get("semimajorAxis"),
         "eccentricity":     body.get("eccentricity"),
         "inclination":      body.get("inclination"),
-        "orbitalPeriod":    body.get("sideralOrbit"),
+        "orbitalPeriod":    body.get("sideralOrbit") or body.get("orbitalPeriod"),
         "discoveredBy":     body.get("discoveredBy"),
         "moons":            body.get("moons") or [],
     }
@@ -65,7 +66,7 @@ LOCAL_PLANETS = [
      "massMassValue": 3.301, "massExp": 23, "radiusMean": 2439.7, "gravity": 3.70,
      "semimajorAxis": 57909050, "eccentricity": 0.2056, "inclination": 7.005,
      "orbitalPeriod": 87.97, "moons": _moons(0), "discoveredBy": None},
-    {"id": "venus", "name": "V\u00e9nus", "nameEnglish": "Venus",
+    {"id": "venus", "name": "Vénus", "nameEnglish": "Venus",
      "massMassValue": 4.867, "massExp": 24, "radiusMean": 6051.8, "gravity": 8.87,
      "semimajorAxis": 108208000, "eccentricity": 0.0068, "inclination": 3.395,
      "orbitalPeriod": 224.70, "moons": _moons(0), "discoveredBy": None},
@@ -101,7 +102,6 @@ LOCAL_PLANETS = [
 ]
 
 
-
 def _ok(data):
     return {"ok": True, "data": data, "error": None}
 
@@ -111,6 +111,27 @@ def _fail(message):
 
 
 @cache.memoize(timeout=3600)
+def _fetch_bodies_cached(fields):
+    """Fetch solar system bodies and return raw JSON on success; raise on failure."""
+    response = requests.get(
+        SOLAR_SYSTEM_BASE_URL,
+        params={"data": fields},
+        headers=_headers(),
+        timeout=6,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+@cache.memoize(timeout=3600)
+def _fetch_body_cached(body_id):
+    """Fetch a single solar system body and return raw JSON on success; raise on failure."""
+    url = f"{SOLAR_SYSTEM_BASE_URL}/{body_id}"
+    response = requests.get(url, timeout=6)
+    response.raise_for_status()
+    return response.json()
+
+
 def get_bodies(is_planet=None):
     """Fetch solar system bodies from the Solar System OpenData API.
 
@@ -121,14 +142,7 @@ def get_bodies(is_planet=None):
         dict: {"ok": bool, "data": list|None, "error": str|None}
     """
     try:
-        response = requests.get(
-            SOLAR_SYSTEM_BASE_URL,
-            params={"data": FIELDS},
-            headers=_headers(),
-            timeout=6,
-        )
-        response.raise_for_status()
-        payload = response.json()
+        payload = _fetch_bodies_cached(FIELDS)
         raw_bodies = payload.get("bodies", [])
 
         # Normalise upstream field names → template-expected names.
@@ -150,7 +164,6 @@ def get_bodies(is_planet=None):
         return _fail(f"Unexpected error fetching solar system data: {str(e)}")
 
 
-@cache.memoize(timeout=3600)
 def get_planets():
     """Planets for the UI, with a built-in fallback.
 
@@ -177,7 +190,6 @@ def get_planets():
     }
 
 
-@cache.memoize(timeout=3600)
 def get_body(body_id):
     """Fetch a single solar system body by its ID.
 
@@ -188,10 +200,8 @@ def get_body(body_id):
         dict: {"ok": bool, "data": dict|None, "error": str|None}
     """
     try:
-        url = f"{SOLAR_SYSTEM_BASE_URL}/{body_id}"
-        response = requests.get(url, timeout=6)
-        response.raise_for_status()
-        return _ok(response.json())
+        raw = _fetch_body_cached(body_id)
+        return _ok(_normalise(raw))
     except requests.exceptions.Timeout:
         return _fail("The request to the Solar System OpenData API timed out.")
     except requests.exceptions.HTTPError as e:

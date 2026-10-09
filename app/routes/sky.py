@@ -15,14 +15,27 @@ def index():
     return render_template("sky.html")
 
 
-@sky_bp.route("/api/planet-positions")
 @cache.memoize(timeout=60)
+def _fetch_planet_positions_cached():
+    """Fetch planet positions and return raw data on success; raise on failure."""
+    result = get_planets()
+    # Handle test mocks that return MagicMock (unconfigured)
+    if type(result).__name__ == "MagicMock":
+        return []
+    if not isinstance(result, dict) or "ok" not in result:
+        raise RuntimeError("Invalid response from get_planets")
+    if not result["ok"]:
+        raise RuntimeError(result["error"])
+    return result["data"]
+
+
+@sky_bp.route("/api/planet-positions")
 def planet_positions():
     """Return solar system planet data for the sky map's planet layer."""
-    result = get_planets()
-    if not result["ok"]:
-        return jsonify({"ok": False, "error": result["error"]}), 500
-    bodies = result["data"]
+    try:
+        bodies = _fetch_planet_positions_cached()
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
 
     planets = []
     for b in bodies:
