@@ -22,7 +22,7 @@ Built for demonstration and portfolio use — cleanly structured, thoroughly tes
 - [x] **"Where to Find This Planet Tonight"**: Real-time browser-side ephemeris calculating altitude, azimuth, compass heading, constellation, distance (AU), and rise/set times using your geolocation.
 - [x] **Exoplanet Search**: Query confirmed exoplanets by name or host star with tabular orbital and planetary metrics.
 - [x] **Interactive 2D Sky Map**:
-  - Hipparcos-derived catalog of 1,052 stars down to magnitude 4.5 with labels for major named stars.
+  - Hipparcos-derived catalog of 907 stars down to magnitude 4.5 with labels for 83 major named stars.
   - Constellation stick-figure lines across major constellations with toggle control.
   - IAU constellation boundary detection powered by astronomy-engine.
   - Real-time planet, Sun, and Moon positions rendered dynamically on the celestial sphere.
@@ -119,7 +119,9 @@ SpaceBoard/
 ├── run.py                         # Local development server entry point
 ├── wsgi.py                        # Production WSGI entry point (gunicorn / uWSGI)
 ├── Dockerfile                     # Container image definition
+├── docker-entrypoint.sh           # Container entrypoint (PORT expansion, exec gunicorn)
 ├── docker-compose.yml             # Local container orchestration
+├── render.yaml                    # Render deployment blueprint
 ├── LICENSE                        # MIT license text
 ├── README.md                      # Project documentation
 └── PROJECT_STRUCTURE.md           # Architectural layout and design guidelines
@@ -282,7 +284,7 @@ to safe development defaults, and a placeholder key triggers the rate-limited
 
 The Sky Map renders a client-side planisphere directly in an HTML5 canvas:
 
-- **Star Field**: 1,052 bright stars down to magnitude 4.5 based on Hipparcos catalog data (`stars.json`), with spectral coloring and labeling for prominent navigational stars.
+- **Star Field**: 907 bright stars down to magnitude 4.5 based on Hipparcos catalog data (`stars.json`), sized by apparent magnitude and labelled with the 83 stars that carry a recorded name.
 - **Constellation Lines**: Stick-figure alignments connecting astronomical coordinates across major constellations (`constellations.json`), toggled via the side control panel.
 - **Constellation Detection**: Accurate IAU constellation boundary resolution for celestial bodies via `Astronomy.Constellation(ra, dec)`.
 - **Live Planetary Ephemeris**: Sun, Moon, and planetary positions (Mercury through Neptune, plus Pluto) computed on-the-fly with `astronomy-engine`, showing real-time horizon coordinates (altitude/azimuth).
