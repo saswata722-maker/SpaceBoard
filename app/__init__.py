@@ -16,13 +16,11 @@ def create_app():
     from app.routes.asteroids import asteroids_bp
     from app.routes.home import home_bp
     from app.routes.planets import planets_bp
-    from app.routes.stars import stars_bp
     from app.routes.sky import sky_bp
 
     app.register_blueprint(home_bp)
     app.register_blueprint(asteroids_bp)
     app.register_blueprint(planets_bp)
-    app.register_blueprint(stars_bp)
     app.register_blueprint(sky_bp)
 
     # Custom error handlers
