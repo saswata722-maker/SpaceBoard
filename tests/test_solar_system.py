@@ -1,5 +1,6 @@
 from unittest.mock import MagicMock, patch
 
+import pytest
 from requests.exceptions import HTTPError, Timeout
 
 from app.api.solar_system import get_body, get_bodies, get_planets, _normalise
@@ -218,7 +219,51 @@ def test_get_body_success(mock_get):
 
 @patch("app.api.solar_system.requests.get")
 def test_get_body_timeout(mock_get):
+    """An unknown body id has no built-in entry, so a dead API is still a
+    hard failure for it."""
     mock_get.side_effect = Timeout("Connection timed out")
+
+    app = _app()
+    with app.app_context():
+        from app.cache import cache
+
+        cache.clear()
+        result = get_body("unknown-body")
+
+    assert result["ok"] is False
+    assert "timed out" in result["error"]
+
+
+@patch("app.api.solar_system.requests.get")
+def test_get_body_success_has_no_note(mock_get):
+    mock_get.return_value = _mock_response(SAMPLE_BODY_EARTH)
+
+    app = _app()
+    with app.app_context():
+        from app.cache import cache
+
+        cache.clear()
+        result = get_body("terre")
+
+    assert result["ok"] is True
+    assert result["data"]["nameEnglish"] == "Earth"
+    assert result["note"] is None
+
+
+@pytest.mark.parametrize("failure", [
+    {"side_effect": Timeout("Connection timed out"), "expected": "timed out"},
+    {"status_code": 401, "expected": "HTTP 401"},
+], ids=["timeout", "http-401"])
+@patch("app.api.solar_system.requests.get")
+def test_get_body_falls_back_to_builtin(mock_get, failure):
+    """The OpenData API needs a bearer token; without one the single-body
+    endpoint fails and the detail page would bounce visitors back to the
+    list. The matching built-in body keeps the profile reachable, with a
+    provenance note."""
+    if "side_effect" in failure:
+        mock_get.side_effect = failure["side_effect"]
+    else:
+        mock_get.return_value = _mock_response({}, status_code=failure["status_code"])
 
     app = _app()
     with app.app_context():
@@ -227,8 +272,32 @@ def test_get_body_timeout(mock_get):
         cache.clear()
         result = get_body("mars")
 
+    assert result["ok"] is True
+    assert result["error"] is None
+    assert result["note"] is not None
+    assert failure["expected"] in result["note"]
+    # The note says what fixes it, not just that something is wrong.
+    assert "SOLAR_SYSTEM_API_KEY" in result["note"]
+    assert "generatekey.html" in result["note"]
+    assert result["data"]["nameEnglish"] == "Mars"
+    assert result["data"]["id"] == "mars"
+
+
+@patch("app.api.solar_system.requests.get")
+def test_get_body_unknown_id_still_fails_cleanly(mock_get):
+    """Without a built-in entry there is nothing to fall back to."""
+    mock_get.return_value = _mock_response({}, status_code=404)
+
+    app = _app()
+    with app.app_context():
+        from app.cache import cache
+
+        cache.clear()
+        result = get_body("not-a-body")
+
     assert result["ok"] is False
-    assert "timed out" in result["error"]
+    assert result["data"] is None
+    assert "HTTP 404" in result["error"]
 
 
 # ---------------------------------------------------------------------------

@@ -110,6 +110,9 @@ def _fail(message):
     return {"ok": False, "data": None, "error": message}
 
 
+_LOCAL_BY_ID = {body["id"]: body for body in LOCAL_PLANETS}
+
+
 @cache.memoize(timeout=3600)
 def _fetch_bodies_cached(fields):
     """Fetch solar system bodies and return raw JSON on success; raise on failure."""
@@ -127,7 +130,7 @@ def _fetch_bodies_cached(fields):
 def _fetch_body_cached(body_id):
     """Fetch a single solar system body and return raw JSON on success; raise on failure."""
     url = f"{SOLAR_SYSTEM_BASE_URL}/{body_id}"
-    response = requests.get(url, timeout=6)
+    response = requests.get(url, timeout=6, headers=_headers())
     response.raise_for_status()
     return response.json()
 
@@ -185,7 +188,10 @@ def get_planets():
         "error": None,
         "note": (
             "Live solar system data is unavailable (the OpenData API now needs a "
-            f"free API key: {result['error']}). Showing built-in planet data."
+            f"free API key: {result['error']}). Showing built-in planet data. "
+            "Set SOLAR_SYSTEM_API_KEY in .env with a key from "
+            "https://api.le-systeme-solaire.net/generatekey.html to use live "
+            "data, then restart the app."
         ),
     }
 
@@ -193,22 +199,44 @@ def get_planets():
 def get_body(body_id):
     """Fetch a single solar system body by its ID.
 
+    The live OpenData API now needs a bearer token, so without a key the
+    single-body endpoint 401s and the detail page would bounce visitors back
+    to the list. Falling back to the matching built-in body — the same data
+    the card grid uses — keeps the profile reachable, and the note tells the
+    template to say where the numbers came from.
+
     Args:
         body_id: The body's unique identifier (e.g., "earth", "mars").
 
     Returns:
-        dict: {"ok": bool, "data": dict|None, "error": str|None}
+        dict: {"ok": bool, "data": dict|None, "error": str|None, "note": str|None}
     """
     try:
         raw = _fetch_body_cached(body_id)
-        return _ok(_normalise(raw))
+        return {"ok": True, "data": _normalise(raw), "error": None, "note": None}
     except requests.exceptions.Timeout:
-        return _fail("The request to the Solar System OpenData API timed out.")
+        error = "The request to the Solar System OpenData API timed out."
     except requests.exceptions.HTTPError as e:
-        return _fail(
+        error = (
             f"Solar System OpenData API returned an error (HTTP {e.response.status_code})."
         )
     except requests.exceptions.RequestException as e:
-        return _fail(f"Could not reach Solar System OpenData API: {str(e)}")
+        error = f"Could not reach Solar System OpenData API: {str(e)}"
     except Exception as e:
-        return _fail(f"Unexpected error fetching body data: {str(e)}")
+        error = f"Unexpected error fetching body data: {str(e)}"
+
+    local = _LOCAL_BY_ID.get(body_id)
+    if local is None:
+        return _fail(error)
+    return {
+        "ok": True,
+        "data": dict(local),
+        "error": None,
+        "note": (
+            "Live solar system data is unavailable (the OpenData API now needs a "
+            f"free API key: {error}). Showing built-in planet data. Set "
+            "SOLAR_SYSTEM_API_KEY in .env with a key from "
+            "https://api.le-systeme-solaire.net/generatekey.html to use live "
+            "data, then restart the app."
+        ),
+    }
