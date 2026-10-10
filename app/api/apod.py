@@ -92,6 +92,19 @@ def _fetch_primary(date=None):
         return None, f"Unexpected error fetching APOD data: {str(e)}"
 
     if not _validate_apod_payload(data):
+        current_app.logger.debug("APOD placeholder detected for %s, trying previous dates", target)
+        for i in range(1, 8):
+            fallback_date = (_date.fromisoformat(target) - _timedelta(days=i)).isoformat()
+            try:
+                fallback_data = _fetch_apod_with_fallback_cached(api_key, fallback_date, False)
+                if _validate_apod_payload(fallback_data):
+                    current_app.logger.info("APOD fallback succeeded with date %s", fallback_date)
+                    return fallback_data, None
+                current_app.logger.debug("APOD fallback date %s also placeholder", fallback_date)
+            except Exception as e:
+                current_app.logger.debug("APOD fallback date %s error: %s", fallback_date, e)
+                continue
+        current_app.logger.warning("APOD all 7 previous dates failed validation, triggering NASA Image Library fallback")
         return None, f"APOD payload failed structural validation: {data!r}"
 
     return data, None
