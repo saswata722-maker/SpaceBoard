@@ -181,9 +181,18 @@ def _designation(name):
     return stripped if stripped != name and len(stripped) >= 3 else name
 
 
+def _sanitize_query(query):
+    """Remove special characters that cause API errors.
+
+    Parentheses and other special characters in asteroid names like "(2024 AB)"
+    cause 403 errors from the NASA Image and Video Library API.
+    """
+    return re.sub(r"[\(\)\[\]\{\}]", "", query).strip()
+
+
 def _nasa_image(stem, body):
     """The NASA library's image of *stem* for today, or None."""
-    query = f"{stem} planet"
+    query = _sanitize_query(f"{stem} planet")
     for allow_visualisation, subject_first in _SELECTION_PASSES:
         result = search_images(
             query,
@@ -204,6 +213,7 @@ def _nasa_image(stem, body):
 
 def _commons_image(designation, search_term):
     """Commons' image of *designation* for today, or None; never raises."""
+    search_term = _sanitize_query(search_term)
     result = search_commons_images(search_term, designation)
     if not result["ok"]:
         current_app.logger.warning(
