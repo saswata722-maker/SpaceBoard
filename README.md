@@ -7,7 +7,7 @@ A modern Flask web app to explore the solar system, exoplanets, near-Earth aster
 SpaceBoard gives astronomy enthusiasts and curious explorers an intuitive interface to browse:
 - **Asteroids** — Near-Earth Objects (NEOs) from NASA NeoWs with hazard assessment, estimated diameters, and close-approach velocities/miss distances.
 - **Planets & Exoplanets** — Physical characteristics (mass, radius, gravity, moons) for solar system bodies, searchable database of confirmed exoplanets via NASA's Exoplanet Archive, and real-time **"Where to find this planet tonight"** observing data. Each object has a dedicated detail page.
-- **Astronomy Picture of the Day (APOD)** — Daily featured space imagery with a date picker on the home page.
+- **Astronomy Picture of the Day (APOD)** — Daily featured space imagery on the home page, plus a daily space fact sourced from Wikipedia's On This Day feed (no API key needed), with a failover provider when NASA's APOD endpoint is unavailable.
 - **Sky Map** — Interactive 2D planisphere rendering celestial objects, stars, constellation lines, coordinate grids, and live planetary positions for any location and time on Earth.
 
 Built for demonstration and portfolio use — cleanly structured, thoroughly tested, with defensive error handling and rate-limit caching throughout.
@@ -16,7 +16,7 @@ Built for demonstration and portfolio use — cleanly structured, thoroughly tes
 
 ## Features
 
-- [x] **Astronomy Picture of the Day (APOD)**: Daily featured space imagery with date picker, metadata, and media fallbacks.
+- [x] **Astronomy Picture of the Day (APOD)**: Daily featured space imagery with metadata, media fallbacks, and a secondary-image failover, plus daily date-varying copy from a live source (IR-03/IR-04)
 - [x] **Asteroid Tracker (NeoWs)**: Interactive dashboard of NEOs filterable by date range and hazardous classification.
 - [x] **Solar System Explorer**: Physical profiles and orbital data for all major planets via the Solar System OpenData API.
 - [x] **"Where to Find This Planet Tonight"**: Real-time browser-side ephemeris calculating altitude, azimuth, compass heading, constellation, distance (AU), and rise/set times using your geolocation.
@@ -67,7 +67,11 @@ SpaceBoard/
 │   │   ├── apod.py                # NASA Astronomy Picture of the Day API client
 │   │   ├── exoplanets.py          # NASA Exoplanet Archive TAP/queries
 │   │   ├── neows.py               # NASA NeoWs Near-Earth Object feed client
-│   │   └── solar_system.py        # Solar System OpenData API client
+│   │   ├── solar_system.py        # Solar System OpenData API client
+│   │   ├── images.py              # NASA Image Library client (APOD failover + search)
+│   │   ├── imagery.py             # Per-body image lookup for detail pages
+│   │   ├── commons.py             # Wikimedia Commons image search (exoplanet fallback)
+│   │   └── spacefacts.py          # Daily space facts (Wikipedia On This Day, Open Notify, NASA Fireball)
 │   │
 │   ├── routes/                    # Blueprint route controllers
 │   │   ├── __init__.py
@@ -109,7 +113,13 @@ SpaceBoard/
 │   ├── test_neows.py              # NeoWs API adapter & hazard logic tests
 │   ├── test_routes.py             # Flask route responses, status codes & template rendering
 │   ├── test_sky.py                # Sky route, /sky/api/planet-positions & caching tests
-│   └── test_solar_system.py       # Solar system API adapter & fallback tests
+│   ├── test_solar_system.py       # Solar system API adapter & fallback tests
+│   ├── test_images.py             # NASA Image Library client tests
+│   ├── test_imagery.py            # Body-image lookup tests
+│   ├── test_commons.py            # Wikimedia Commons search tests
+│   ├── test_config.py             # Configuration & secrets handling tests
+│   ├── test_spacefacts.py         # Daily space facts fallback chain tests
+│   └── test_js_syntax.py          # JavaScript syntax validation tests
 │
 ├── .env.example                   # Environment configuration template
 ├── .gitignore                     # Git ignore rules
@@ -123,6 +133,7 @@ SpaceBoard/
 ├── docker-compose.yml             # Local container orchestration
 ├── render.yaml                    # Render deployment blueprint
 ├── LICENSE                        # MIT license text
+├── REQUIREMENTS.md                # Interface & data-integrity requirements
 ├── README.md                      # Project documentation
 └── PROJECT_STRUCTURE.md           # Architectural layout and design guidelines
 ```
@@ -260,7 +271,7 @@ to safe development defaults, and a placeholder key triggers the rate-limited
 | Variable | Default | Notes |
 | :--- | :--- | :--- |
 | `NASA_API_KEY` | `DEMO_KEY` | Free from [api.nasa.gov](https://api.nasa.gov/) |
-| `SOLAR_SYSTEM_API_KEY` | *(empty)* | Optional; enables live planet data instead of the built-in dataset |
+| `SOLAR_SYSTEM_API_KEY` | *(empty)* | Optional; free key from [api.le-systeme-solaire.net](https://api.le-systeme-solaire.net/generatekey.html) (emailed to you). Without it the live API returns HTTP 401 and the planet pages show the built-in dataset with an explanatory note |
 | `SECRET_KEY` | dev default | **Set a strong unique value in production** |
 | `FLASK_ENV` | `development` | |
 | `CACHE_TYPE` | `SimpleCache` | In-memory; see notes below |
@@ -332,7 +343,13 @@ On the **Planets** page (`/planets/`), each solar system body includes a real-ti
 - [x] Glassmorphism design system
 - [x] Automated unit and contract test suites
 - [x] Cloud deployment configuration (Docker / gunicorn / Render / Railway)
+- [x] **NASA imagery for celestial body profiles** — replace generic text-only profiles with authentic high-resolution photography of the subject body, sourced from NASA APIs (IR-01)
+- [x] **Secondary image API fallback** — fail the home page's Image of the Day over to a second astronomical image provider when the primary NASA APOD endpoint returns nothing usable (IR-04)
+- [x] **Simplify the sky map control interface** — reduce the control panel to the controls users actually need, improving intuitiveness and accessibility (IR-02)
 - [ ] Progressive Web App (PWA) offline support (manifest + service worker)
+
+Interface, visual, and data-integrity requirements are specified in
+[`REQUIREMENTS.md`](REQUIREMENTS.md).
 
 ---
 
