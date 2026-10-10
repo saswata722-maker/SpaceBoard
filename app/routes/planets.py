@@ -1,6 +1,7 @@
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 from app.api.exoplanets import DISCOVERY_METHODS, get_exoplanet, get_exoplanets
+from app.api.imagery import get_body_image
 from app.api.solar_system import get_body, get_planets
 
 planets_bp = Blueprint("planets", __name__, url_prefix="/planets")
@@ -48,10 +49,15 @@ def planet_detail(body_id):
         flash(f"Could not load details for {body_id}. Please try again.", "error")
         return redirect(url_for("planets.index"))
 
+    planet = result["data"]
     return render_template(
         "planet_detail.html",
-        planet=result["data"],
+        planet=planet,
         body_id=body_id,
+        body_note=result.get("note"),
+        body_image=get_body_image(
+            planet.get("nameEnglish") or planet.get("name")
+        )["data"],
     )
 
 
@@ -67,4 +73,8 @@ def exoplanet_detail(pl_name):
         "exoplanet_detail.html",
         planet=result["data"],
         pl_name=pl_name,
+        body_image=get_body_image(
+            result["data"].get("pl_name"),
+            hostname=result["data"].get("hostname"),
+        )["data"],
     )

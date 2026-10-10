@@ -13,6 +13,19 @@
     <p class="text-gray-400">Exoplanet — NASA Exoplanet Archive data</p>
 </div>
 
+{% if body_image %}
+<div class="mb-6 animate-fade-in-up">
+    <img src="{{ body_image.url }}" alt="{{ planet.pl_name }}"
+         loading="lazy" class="w-full max-h-96 object-contain bg-black rounded-xl">
+    <p class="mt-2 text-xs text-gray-500">
+        {{ body_image.title }}{% if body_image.credit %} &middot; Image credit: {{ body_image.credit }}{% endif %}
+    </p>
+    <p class="text-xs text-gray-500">
+        Source: {% if body_image.file_page_url %}<a href="{{ body_image.file_page_url }}" target="_blank" rel="noopener" class="text-blue-400 hover:text-blue-300 hover:underline">{{ body_image.provider }}</a>{% else %}{{ body_image.provider }}{% endif %}{% if body_image.license %} ({{ body_image.license }}){% endif %}
+    </p>
+</div>
+{% endif %}
+
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <!-- Main details -->
     <div class="lg:col-span-2 space-y-6">

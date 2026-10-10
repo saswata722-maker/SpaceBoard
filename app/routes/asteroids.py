@@ -1,6 +1,7 @@
 from datetime import date, timedelta
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
+from app.api.imagery import get_body_image
 from app.api.neows import get_neo, get_neo_feed
 
 asteroids_bp = Blueprint("asteroids", __name__, url_prefix="/asteroids")
@@ -84,4 +85,5 @@ def neo_detail(neo_id):
         "asteroid_detail.html",
         neo=result["data"],
         neo_id=neo_id,
+        body_image=get_body_image(result["data"].get("name"))["data"],
     )

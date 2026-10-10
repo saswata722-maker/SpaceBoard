@@ -16,7 +16,22 @@
         {% endif %}
     </h1>
     <p class="text-gray-400">Solar system body — detailed properties</p>
+    {% if body_note %}
+        <div class="glass-card bg-amber-900/20 border-amber-600/40 text-amber-100 mt-4 text-sm">
+            {{ body_note }}
+        </div>
+    {% endif %}
 </div>
+
+{% if body_image %}
+<div class="mb-6 animate-fade-in-up">
+    <img src="{{ body_image.url }}" alt="{{ planet.nameEnglish or planet.name }}"
+         loading="lazy" class="w-full max-h-96 object-contain bg-black rounded-xl">
+    <p class="mt-2 text-xs text-gray-500">
+        {{ body_image.title }}{% if body_image.credit %} &middot; Image credit: {{ body_image.credit }}{% endif %}
+    </p>
+</div>
+{% endif %}
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <!-- Key stats -->
