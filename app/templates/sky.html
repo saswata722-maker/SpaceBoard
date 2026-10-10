@@ -29,6 +29,31 @@
             filter: brightness(0.45) sepia(1) hue-rotate(-28deg) saturate(2.6);
         }
 
+        /* Control panel groups: separated by a rule and a heading, never by
+           spacing alone. */
+        .control-group {
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            padding-top: 0.875rem;
+        }
+        section.control-group:first-of-type {
+            border-top: none;
+            padding-top: 0;
+        }
+        .control-group-title {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--space-300);
+            margin-bottom: 0.5rem;
+        }
+        summary.control-group-title {
+            cursor: pointer;
+        }
+        details[open] > summary.control-group-title {
+            color: var(--accent-blue-light);
+        }
+
         /* Range sliders */
         input[type="range"] {
             -webkit-appearance: none;
@@ -61,6 +86,12 @@
             cursor: pointer;
             border: 2px solid rgba(255, 255, 255, 0.9);
         }
+        /* The range rule above drops the global focus-visible outline, so the
+           sliders carry their own visible focus ring. */
+        input[type="range"]:focus-visible {
+            outline: 2px solid var(--accent-blue);
+            outline-offset: 4px;
+        }
     </style>
 </head>
 <body class="bg-space-900 text-gray-100 min-h-screen flex flex-col">
@@ -69,7 +100,7 @@
             <a href="{{ url_for('home.index') }}" class="flex items-center gap-3 text-xl font-bold text-white tracking-tight glass-btn-ghost px-3 py-2 rounded-xl group">
                 <span class="relative">
                     <svg class="w-8 h-8 text-amber-400 group-hover:rotate-12 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
                     </svg>
                 </span>
                 SpaceBoard
@@ -93,143 +124,177 @@
     </nav>
 
     <main class="flex-1 flex flex-col lg:flex-row">
-        <aside class="w-full lg:w-80 glass-subtle lg:border-r border-gray-700/50 p-4 space-y-5 overflow-y-auto">
+        <aside class="w-full lg:w-80 glass-subtle lg:border-r border-gray-700/50 p-4 space-y-3 overflow-y-auto">
             <h2 class="text-lg font-semibold text-white flex items-center gap-2">
                 <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
                 Sky Map Controls
             </h2>
 
-            <div class="space-y-2">
-                <label class="text-sm text-gray-400 block">Location</label>
-                <div class="flex gap-2">
-                    <div class="flex-1">
-                        <label class="text-xs text-gray-500 block mb-1" for="latitude">Latitude</label>
-                        <input type="number" id="latitude" step="0.01" min="-90" max="90" value="0"
-                               class="glass-input w-full text-sm py-2">
-                    </div>
-                    <div class="flex-1">
-                        <label class="text-xs text-gray-500 block mb-1" for="longitude">Longitude</label>
-                        <input type="number" id="longitude" step="0.01" min="-180" max="180" value="0"
-                               class="glass-input w-full text-sm py-2">
-                    </div>
-                </div>
-                <button id="locate-btn" class="glass-btn-primary w-full text-sm py-2 flex items-center justify-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                    Use My Location
-                </button>
-            </div>
-
-            <div class="space-y-2">
-                <label class="text-sm text-gray-400 block" for="obs-time">Observation Time (local)</label>
-                <input type="datetime-local" id="obs-time" class="glass-input w-full text-sm py-2">
-                <input type="range" id="time-slider" min="0" max="24" step="0.25" class="w-full">
-                <p class="text-xs text-gray-500 text-center">Drag to scrub through the day</p>
-                <div class="flex items-center gap-2 pt-1">
-                    <button id="anim-play-btn" type="button" class="glass-btn-ghost flex-1 text-xs py-1.5 px-3 flex items-center justify-center gap-1.5">
-                        <span id="anim-play-icon">&#9658;</span>
-                        <span id="anim-play-text">Play</span>
-                    </button>
-                    <select id="anim-speed" class="glass-input text-xs py-1.5 px-2">
-                        <option value="60">60&times; (1m/s)</option>
-                        <option value="300">300&times; (5m/s)</option>
-                        <option value="3600" selected>3600&times; (1h/s)</option>
-                        <option value="86400">86400&times; (1d/s)</option>
-                    </select>
-                    <button id="time-now-btn" type="button" title="Reset to current time" class="glass-btn-ghost text-gray-300 hover:text-white text-xs py-1.5 px-2">
-                        Now
-                    </button>
-                </div>
-            </div>
-
-            <div class="space-y-3">
-                <label class="text-sm text-gray-400 block">View Direction</label>
-                <div class="grid grid-cols-3 gap-2">
-                    <button data-dir="north" class="view-dir-btn glass-subtle rounded-lg p-3 text-sm text-gray-300 hover:text-white hover:bg-blue-600/60 transition">
-                        <span class="block text-lg">&#8593;</span>
-                        <span class="block text-xs mt-1">North</span>
-                    </button>
-                    <button data-dir="south" class="view-dir-btn glass-subtle rounded-lg p-3 text-sm text-gray-300 hover:text-white hover:bg-blue-600/60 transition">
-                        <span class="block text-lg">&#8595;</span>
-                        <span class="block text-xs mt-1">South</span>
-                    </button>
-                    <button data-dir="east" class="view-dir-btn glass-subtle rounded-lg p-3 text-sm text-gray-300 hover:text-white hover:bg-blue-600/60 transition">
-                        <span class="block text-lg">&#8592;</span>
-                        <span class="block text-xs mt-1">East</span>
-                    </button>
-                    <button data-dir="west" class="view-dir-btn glass-subtle rounded-lg p-3 text-sm text-gray-300 hover:text-white hover:bg-blue-600/60 transition">
-                        <span class="block text-lg">&#8594;</span>
-                        <span class="block text-xs mt-1">West</span>
-                    </button>
-                    <button data-dir="zenith" class="view-dir-btn glass-subtle rounded-lg p-3 text-sm text-gray-300 hover:text-white hover:bg-blue-600/60 transition">
-                        <span class="block text-lg">&#8593;</span>
-                        <span class="block text-xs mt-1">Zenith</span>
-                    </button>
-                    <button data-dir="nadir" class="view-dir-btn glass-subtle rounded-lg p-3 text-sm text-gray-300 hover:text-white hover:bg-blue-600/60 transition">
-                        <span class="block text-lg">&#8595;</span>
-                        <span class="block text-xs mt-1">Below</span>
-                    </button>
-                </div>
-            </div>
-
-            <div class="space-y-2">
-                <label class="text-sm text-gray-400 block" for="zoom-slider">Zoom: <span id="zoom-level" class="text-white font-mono">180&deg;</span></label>
-                <input type="range" id="zoom-slider" min="10" max="180" value="180" step="5" class="w-full">
-            </div>
-
-            <div class="space-y-2">
-                <label class="text-sm text-gray-400 block" for="projection-select">Projection</label>
-                <select id="projection-select" class="glass-input w-full text-sm py-2">
-                    <option value="stereographic" selected>Stereographic</option>
-                    <option value="orthographic">Orthographic</option>
-                </select>
-            </div>
-
-            <div class="space-y-3">
-                <p class="text-sm text-gray-400">Display Options</p>
+            <section class="control-group">
+                <h3 class="control-group-title">Location</h3>
                 <div class="space-y-2">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" id="show-constellations" checked class="w-4 h-4 rounded border-gray-600 bg-space-700/80 text-blue-500 focus:ring-blue-500">
-                        <span class="text-sm text-gray-300">Constellation lines</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" id="show-planets" checked class="w-4 h-4 rounded border-gray-600 bg-space-700/80 text-blue-500 focus:ring-blue-500">
-                        <span class="text-sm text-gray-300">Planets</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" id="show-ecliptic" checked class="w-4 h-4 rounded border-gray-600 bg-space-700/80 text-blue-500 focus:ring-blue-500">
-                        <span class="text-sm text-gray-300">Ecliptic line</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" id="show-grid" checked class="w-4 h-4 rounded border-gray-600 bg-space-700/80 text-blue-500 focus:ring-blue-500">
-                        <span class="text-sm text-gray-300">Grid lines</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" id="show-names" checked class="w-4 h-4 rounded border-gray-600 bg-space-700/80 text-blue-500 focus:ring-blue-500">
-                        <span class="text-sm text-gray-300">Star names</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" id="show-nightmode" class="w-4 h-4 rounded border-gray-600 bg-space-700/80 text-red-500 focus:ring-red-500">
-                        <span class="text-sm text-red-300">Night mode (red)</span>
-                    </label>
+                    <div class="flex gap-2">
+                        <div class="flex-1">
+                            <label class="text-xs text-gray-500 block mb-1" for="latitude">Latitude</label>
+                            <input type="number" id="latitude" step="0.01" min="-90" max="90" value="0"
+                                   class="glass-input w-full text-sm py-2">
+                        </div>
+                        <div class="flex-1">
+                            <label class="text-xs text-gray-500 block mb-1" for="longitude">Longitude</label>
+                            <input type="number" id="longitude" step="0.01" min="-180" max="180" value="0"
+                                   class="glass-input w-full text-sm py-2">
+                        </div>
+                    </div>
+                    <button id="locate-btn" class="glass-btn-primary w-full text-sm py-2 flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        Use My Location
+                    </button>
                 </div>
-            </div>
+            </section>
 
-            <div class="space-y-1.5 pt-3 border-t border-gray-700/50">
-                <p class="text-xs text-gray-500 uppercase tracking-wider">Legend</p>
-                <div class="flex items-center gap-2 text-xs text-gray-400"><span class="w-3 h-3 rounded-full bg-yellow-200"></span> Planet</div>
-                <div class="flex items-center gap-2 text-xs text-gray-400"><span class="w-3 h-3 rounded-full bg-blue-300"></span> Moon</div>
-                <div class="flex items-center gap-2 text-xs text-gray-400"><span class="w-3 h-3 rounded-full bg-white"></span> Star (named)</div>
-                <div class="flex items-center gap-2 text-xs text-gray-400"><span class="w-3 h-3 rounded-full bg-gray-400"></span> Star</div>
-                <div class="flex items-center gap-2 text-xs text-gray-400"><span class="w-3 h-3 rounded bg-indigo-400/70"></span> Constellation line</div>
-            </div>
+            <section class="control-group">
+                <h3 class="control-group-title">Time</h3>
+                <div class="space-y-2">
+                    <div>
+                        <label class="text-xs text-gray-500 block mb-1" for="obs-time">Observation time (local)</label>
+                        <input type="datetime-local" id="obs-time" class="glass-input w-full text-sm py-2">
+                    </div>
+                    <div>
+                        <input type="range" id="time-slider" min="0" max="24" step="0.25" class="w-full">
+                        <p class="text-xs text-gray-500 text-center mt-1">Drag the slider to scrub through the day</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2 pt-1">
+                        <button id="anim-play-btn" type="button" class="glass-btn-ghost flex-1 min-w-[5.5rem] text-xs py-1.5 px-3 flex items-center justify-center gap-1.5">
+                            <span id="anim-play-icon">&#9658;</span>
+                            <span id="anim-play-text">Play</span>
+                        </button>
+                        <div class="flex items-center gap-1.5">
+                            <label class="text-xs text-gray-500 whitespace-nowrap" for="anim-speed">Speed</label>
+                            <select id="anim-speed" class="glass-input text-xs py-1.5 px-2 w-auto">
+                                <option value="60">60&times; (1 min/sec)</option>
+                                <option value="300">300&times; (5 min/sec)</option>
+                                <option value="3600" selected>3600&times; (1 hour/sec)</option>
+                                <option value="86400">86400&times; (1 day/sec)</option>
+                            </select>
+                        </div>
+                        <button id="time-now-btn" type="button" title="Reset to current time" class="glass-btn-ghost text-gray-300 hover:text-white text-xs py-1.5 px-2">
+                            Now
+                        </button>
+                    </div>
+                </div>
+            </section>
 
-            <div class="pt-3 border-t border-gray-700/50 space-y-1">
-                <p class="text-xs text-gray-500 uppercase tracking-wider">Center of view</p>
-                <p id="center-rah" class="text-sm text-gray-300 font-mono">RA: &mdash;</p>
-                <p id="center-ext" class="text-sm text-gray-300 font-mono">Dec: &mdash;</p>
-                <p id="center-alt" class="text-sm text-gray-300 font-mono">Alt: &mdash;</p>
-                <p id="center-az" class="text-sm text-gray-300 font-mono">Az: &mdash;</p>
-            </div>
+            <section class="control-group">
+                <h3 class="control-group-title">View</h3>
+                <div class="space-y-3">
+                    <div class="grid grid-cols-3 gap-2">
+                        <button data-dir="north" class="view-dir-btn glass-subtle rounded-lg p-3 text-sm text-gray-300 hover:text-white hover:bg-blue-600/60 transition">
+                            <span class="block text-lg">&#8593;</span>
+                            <span class="block text-xs mt-1">North</span>
+                        </button>
+                        <button data-dir="south" class="view-dir-btn glass-subtle rounded-lg p-3 text-sm text-gray-300 hover:text-white hover:bg-blue-600/60 transition">
+                            <span class="block text-lg">&#8595;</span>
+                            <span class="block text-xs mt-1">South</span>
+                        </button>
+                        <button data-dir="east" class="view-dir-btn glass-subtle rounded-lg p-3 text-sm text-gray-300 hover:text-white hover:bg-blue-600/60 transition">
+                            <span class="block text-lg">&#8592;</span>
+                            <span class="block text-xs mt-1">East</span>
+                        </button>
+                        <button data-dir="west" class="view-dir-btn glass-subtle rounded-lg p-3 text-sm text-gray-300 hover:text-white hover:bg-blue-600/60 transition">
+                            <span class="block text-lg">&#8594;</span>
+                            <span class="block text-xs mt-1">West</span>
+                        </button>
+                        <button data-dir="zenith" class="view-dir-btn glass-subtle rounded-lg p-3 text-sm text-gray-300 hover:text-white hover:bg-blue-600/60 transition">
+                            <span class="block text-lg">&#8593;</span>
+                            <span class="block text-xs mt-1">Straight up</span>
+                        </button>
+                        <button data-dir="nadir" class="view-dir-btn glass-subtle rounded-lg p-3 text-sm text-gray-300 hover:text-white hover:bg-blue-600/60 transition">
+                            <span class="block text-lg">&#8595;</span>
+                            <span class="block text-xs mt-1">Straight down</span>
+                        </button>
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500 block" for="zoom-slider">Zoom: <span id="zoom-level" class="text-white font-mono">180&deg;</span></label>
+                        <input type="range" id="zoom-slider" min="10" max="180" value="180" step="5" class="w-full mt-1">
+                    </div>
+                </div>
+            </section>
+
+            <section class="control-group">
+                <h3 class="control-group-title">Center of view</h3>
+                <dl class="space-y-1">
+                    <div class="flex justify-between gap-2">
+                        <dt class="text-xs text-gray-500">Right ascension</dt>
+                        <dd id="center-rah" class="text-sm text-gray-300 font-mono">&mdash;</dd>
+                    </div>
+                    <div class="flex justify-between gap-2">
+                        <dt class="text-xs text-gray-500">Declination</dt>
+                        <dd id="center-ext" class="text-sm text-gray-300 font-mono">&mdash;</dd>
+                    </div>
+                    <div class="flex justify-between gap-2">
+                        <dt class="text-xs text-gray-500">Altitude</dt>
+                        <dd id="center-alt" class="text-sm text-gray-300 font-mono">&mdash;</dd>
+                    </div>
+                    <div class="flex justify-between gap-2">
+                        <dt class="text-xs text-gray-500">Azimuth</dt>
+                        <dd id="center-az" class="text-sm text-gray-300 font-mono">&mdash;</dd>
+                    </div>
+                </dl>
+            </section>
+
+            <details class="control-group">
+                <summary class="control-group-title">Display options</summary>
+                <div class="space-y-4 pt-3">
+                    <div>
+                        <h4 class="text-xs text-gray-500 uppercase tracking-wider mb-2">Projection</h4>
+                        <label class="text-xs text-gray-500 block mb-1" for="projection-select">Map projection</label>
+                        <select id="projection-select" class="glass-input w-full text-sm py-2">
+                            <option value="stereographic" selected>Stereographic</option>
+                            <option value="orthographic">Orthographic</option>
+                        </select>
+                    </div>
+                    <div>
+                        <h4 class="text-xs text-gray-500 uppercase tracking-wider mb-2">Layers</h4>
+                        <div class="space-y-2">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="show-constellations" checked class="w-4 h-4 rounded border-gray-600 bg-space-700/80 text-blue-500 focus:ring-blue-500">
+                                <span class="text-sm text-gray-300">Constellation lines</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="show-planets" checked class="w-4 h-4 rounded border-gray-600 bg-space-700/80 text-blue-500 focus:ring-blue-500">
+                                <span class="text-sm text-gray-300">Planets</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="show-ecliptic" checked class="w-4 h-4 rounded border-gray-600 bg-space-700/80 text-blue-500 focus:ring-blue-500">
+                                <span class="text-sm text-gray-300">Ecliptic line</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="show-grid" checked class="w-4 h-4 rounded border-gray-600 bg-space-700/80 text-blue-500 focus:ring-blue-500">
+                                <span class="text-sm text-gray-300">Grid lines</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="show-names" checked class="w-4 h-4 rounded border-gray-600 bg-space-700/80 text-blue-500 focus:ring-blue-500">
+                                <span class="text-sm text-gray-300">Star names</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="show-nightmode" class="w-4 h-4 rounded border-gray-600 bg-space-700/80 text-red-500 focus:ring-red-500">
+                                <span class="text-sm text-red-300">Night mode (red)</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </details>
+
+            <section class="control-group">
+                <h3 class="control-group-title">Legend</h3>
+                <div class="space-y-1">
+                    <div class="flex items-center gap-2 text-xs text-gray-400"><span class="w-3 h-3 rounded-full bg-yellow-200"></span> Planet</div>
+                    <div class="flex items-center gap-2 text-xs text-gray-400"><span class="w-3 h-3 rounded-full bg-blue-300"></span> Moon</div>
+                    <div class="flex items-center gap-2 text-xs text-gray-400"><span class="w-3 h-3 rounded-full bg-white"></span> Star (named)</div>
+                    <div class="flex items-center gap-2 text-xs text-gray-400"><span class="w-3 h-3 rounded-full bg-gray-400"></span> Star</div>
+                    <div class="flex items-center gap-2 text-xs text-gray-400"><span class="w-3 h-3 rounded bg-indigo-400/70"></span> Constellation line</div>
+                </div>
+            </section>
         </aside>
 
         <div class="flex-1 relative min-h-[600px]">

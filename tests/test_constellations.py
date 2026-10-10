@@ -149,6 +149,99 @@ def test_sky_html_has_constellation_toggle(sky_html):
 
 
 # ---------------------------------------------------------------------------
+# IR-02: control panel layout (grouping, disclosure, accessible names)
+# ---------------------------------------------------------------------------
+
+DISCLOSURE_IDS = ("projection-select", "show-constellations", "show-planets",
+                  "show-ecliptic", "show-grid", "show-names", "show-nightmode")
+
+CONTROL_GROUP_TITLES = ("Location", "Time", "View", "Center of view")
+
+
+def _disclosure_block(sky_html):
+    """The single disclosure that hides the rarely used controls."""
+    assert sky_html.count("<details") == 1, (
+        "projection and display options share exactly one disclosure"
+    )
+    start = sky_html.find("<details")
+    end = sky_html.find("</details>", start)
+    assert end != -1
+    return sky_html[start:end]
+
+
+def test_rare_controls_live_behind_one_collapsed_disclosure(sky_html):
+    """IR-02 criterion 4: projection choice and the layer toggles move behind
+    a single disclosure, collapsed by default."""
+    block = _disclosure_block(sky_html)
+
+    for element_id in DISCLOSURE_IDS:
+        assert 'id="%s"' % element_id in block, f"#{element_id} must be inside the disclosure"
+
+    opening_tag = block.split(">", 1)[0]
+    assert "open" not in opening_tag, "the disclosure must be collapsed by default"
+
+
+def test_primary_controls_stay_outside_the_disclosure(sky_html):
+    """The controls needed for the first successful view (location, time,
+    pan/zoom) stay visible — nesting them would break IR-02 criterion 1."""
+    block = _disclosure_block(sky_html)
+
+    for element_id in ("latitude", "longitude", "locate-btn", "obs-time",
+                       "time-slider", "anim-play-btn", "anim-speed",
+                       "time-now-btn", "zoom-slider"):
+        assert 'id="%s"' % element_id in sky_html, f"missing #{element_id}"
+        assert 'id="%s"' % element_id not in block, (
+            f"#{element_id} is a primary control and must not be hidden"
+        )
+
+
+def test_controls_are_grouped_by_purpose_with_headings(sky_html):
+    """IR-02 criterion 3: grouping is conveyed by headings and a rule, not by
+    spacing alone."""
+    for title in CONTROL_GROUP_TITLES:
+        assert title in sky_html, f"missing group heading: {title}"
+    assert "control-group" in sky_html
+    assert "control-group-title" in sky_html
+
+
+def test_every_control_has_an_accessible_name(sky_html):
+    """IR-02 criterion 2: every interactive control carries a visible label,
+    title, or text that names it."""
+    named = (
+        ("latitude", 'for="latitude"'),
+        ("longitude", 'for="longitude"'),
+        ("obs-time", 'for="obs-time"'),
+        ("time-slider", "scrub through the day"),
+        ("anim-play-btn", "Play"),
+        ("anim-speed", 'for="anim-speed"'),
+        ("time-now-btn", "Now"),
+        ("zoom-slider", 'for="zoom-slider"'),
+        ("projection-select", 'for="projection-select"'),
+        ("show-constellations", "Constellation lines"),
+        ("show-planets", "Planets"),
+        ("show-ecliptic", "Ecliptic line"),
+        ("show-grid", "Grid lines"),
+        ("show-names", "Star names"),
+        ("show-nightmode", "Night mode"),
+    )
+    for element_id, marker in named:
+        assert 'id="%s"' % element_id in sky_html, f"missing #{element_id}"
+        assert marker in sky_html, f"#{element_id} has no accessible name"
+
+    for button_text in ("Use My Location", "North", "South", "East", "West",
+                        "Straight up", "Straight down"):
+        assert button_text in sky_html, f"missing direction button label: {button_text}"
+
+
+def test_direction_buttons_and_disclosure_summary_keep_their_names(sky_html):
+    """The six view-direction buttons keep their data-dir wiring (sky.js reads
+    it) and plain-language labels."""
+    for direction in ("north", "south", "east", "west", "zenith", "nadir"):
+        assert 'data-dir="%s"' % direction in sky_html, f"missing direction {direction}"
+    assert "Display options" in sky_html
+
+
+# ---------------------------------------------------------------------------
 # Time animation controls (Play / Pause / speed / Now)
 # ---------------------------------------------------------------------------
 
