@@ -25,10 +25,18 @@ def _validate_apod_payload(data):
     """A usable APOD record is a dict with a non-empty ``url`` and a known
     ``media_type``. Anything else — ``{}``, ``null``, or a record missing
     those fields — fails structural validation and triggers failover.
+
+    Also rejects the NASA placeholder image that the API returns when the
+    actual APOD isn't available yet.
     """
     if not isinstance(data, dict):
         return False
-    return bool(data.get("url")) and data.get("media_type") in ("image", "video")
+    url = data.get("url", "")
+    title = data.get("title", "")
+    # Reject the placeholder NASA logo that APOD returns for unavailable dates
+    if "nasa-logo" in url.lower() or title == "NASA Science":
+        return False
+    return bool(url) and data.get("media_type") in ("image", "video")
 
 
 def _fetch_apod_raw(api_key, date_str):

@@ -5,7 +5,7 @@
 {% block content %}
 <div class="mb-8 animate-fade-in-up">
     <h1 class="text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-white via-gray-200 to-blue-300 bg-clip-text text-transparent">Home</h1>
-    <p class="text-gray-400">NASA's Astronomy Picture of the Day</p>
+    <p class="text-gray-400">Astronomy Picture of the Day</p>
 </div>
 
 {% if fact %}
@@ -31,14 +31,14 @@
             </div>
         {% endif %}
         <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
-            <h3 class="text-sm font-semibold text-gray-300">{{ apod.title }}</h3>
+            <h3 class="text-sm font-semibold text-gray-300">{{ 'Facts' if apod.title == 'NASA Science' else apod.title }}</h3>
             <span class="text-xs text-gray-500 whitespace-nowrap">{{ apod.date }}</span>
         </div>
         {% if apod.copyright %}
             <p class="text-xs text-gray-500">© {{ apod.copyright | trim }}</p>
         {% endif %}
         {% if apod.source %}
-            <p class="text-xs text-gray-500">Source: {{ apod.source }}</p>
+            <p class="text-xs text-gray-500">Source: {{ 'Facts' if apod.source == 'NASA Science' else apod.source }}</p>
         {% endif %}
     </div>
 {% else %}
