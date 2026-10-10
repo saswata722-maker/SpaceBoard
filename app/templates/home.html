@@ -8,19 +8,13 @@
     <p class="text-gray-400">NASA's Astronomy Picture of the Day</p>
 </div>
 
-<!-- Date picker for APOD -->
-<form method="GET" class="glass-card mb-6 animate-fade-in-up stagger-1">
-    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-        <label for="apod_date" class="text-sm font-medium text-gray-300 whitespace-nowrap w-full sm:w-auto">Date</label>
-        <div class="flex-1 sm:flex-none">
-            <input type="date" id="apod_date" name="date" value="{{ apod_date }}"
-                   class="glass-input w-full max-w-xs">
-        </div>
-        <button type="submit" class="glass-btn-primary w-full sm:w-auto">
-            Load
-        </button>
-    </div>
-</form>
+{% if fact %}
+<div class="glass-card mb-6 animate-fade-in-up stagger-1">
+    <h2 class="text-xl md:text-2xl font-bold mb-3">{{ fact.headline }}</h2>
+    <p class="text-gray-300 leading-relaxed">{{ fact.body }}</p>
+    <p class="text-xs text-gray-500 mt-3">Source: <a href="{{ fact.source_url }}" target="_blank" rel="noopener" class="text-blue-400 hover:text-blue-300 hover:underline">{{ fact.source_label }}</a></p>
+</div>
+{% endif %}
 
 {% if error %}
     <div class="glass-card bg-red-900/20 border-red-500/30 text-red-200 animate-fade-in-up stagger-2">
@@ -30,22 +24,22 @@
 {% elif apod %}
     <div class="glass-card-lg overflow-hidden animate-fade-in-up stagger-2">
         {% if apod.media_type == 'image' %}
-            <img src="{{ apod.url }}" alt="{{ apod.title }}" class="w-full max-h-[500px] object-contain bg-black mb-6 rounded-xl">
+            <img src="{{ apod.url }}" alt="{{ apod.title }}" class="w-full max-h-[500px] object-contain bg-black mb-4 rounded-xl">
         {% elif apod.media_type == 'video' %}
-            <div class="aspect-video mb-6 rounded-xl overflow-hidden bg-black">
+            <div class="aspect-video mb-4 rounded-xl overflow-hidden bg-black">
                 <iframe src="{{ apod.url }}" class="w-full h-full" frameborder="0" allowfullscreen></iframe>
             </div>
         {% endif %}
-        <div>
-            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
-                <h2 class="text-xl md:text-2xl font-bold">{{ apod.title }}</h2>
-                <span class="text-sm text-gray-400 whitespace-nowrap self-end">{{ apod.date }}</span>
-            </div>
-            {% if apod.copyright %}
-                <p class="text-xs text-gray-500 mb-4">© {{ apod.copyright | trim }}</p>
-            {% endif %}
-            <p class="text-gray-300 leading-relaxed">{{ apod.explanation }}</p>
+        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
+            <h3 class="text-sm font-semibold text-gray-300">{{ apod.title }}</h3>
+            <span class="text-xs text-gray-500 whitespace-nowrap">{{ apod.date }}</span>
         </div>
+        {% if apod.copyright %}
+            <p class="text-xs text-gray-500">© {{ apod.copyright | trim }}</p>
+        {% endif %}
+        {% if apod.source %}
+            <p class="text-xs text-gray-500">Source: {{ apod.source }}</p>
+        {% endif %}
     </div>
 {% else %}
     <div class="glass-card text-center text-gray-400 animate-fade-in-up stagger-2">

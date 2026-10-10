@@ -1,6 +1,7 @@
-from flask import Blueprint, render_template, request
+from flask import Blueprint, render_template
 
 from app.api.apod import get_apod
+from app.api.spacefacts import get_daily_fact
 
 home_bp = Blueprint("home", __name__)
 
@@ -22,7 +23,12 @@ def favicon():
 
 @home_bp.route("/")
 def index():
-    """Home page displaying NASA's Astronomy Picture of the Day."""
-    date = request.args.get("date")
-    result = get_apod(date)
-    return render_template("home.html", apod=result["data"], error=result["error"], apod_date=date or "")
+    """Home page: the day's fact and media, both live, neither built in."""
+    media = get_apod()
+    fact = get_daily_fact()
+    return render_template(
+        "home.html",
+        apod=media["data"],
+        error=media["error"],
+        fact=fact["data"],
+    )

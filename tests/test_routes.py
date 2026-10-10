@@ -1,5 +1,5 @@
 import re
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 import pytest
 
@@ -14,36 +14,222 @@ def client():
         yield client
 
 
-@patch("app.routes.home.get_apod")
-def test_home_route_success(mock_get_apod, client):
-    mock_get_apod.return_value = {
+FACT_SAMPLE = {
+    "headline": "Sputnik 1",
+    "body": "1957 — The Soviet Union launches Sputnik 1, the first artificial satellite.",
+    "source_label": "Wikipedia",
+    "source_url": "https://en.wikipedia.org/wiki/Sputnik_1",
+}
+
+FACT_SAMPLE_ALT = {
+    "headline": "Humans in space right now",
+    "body": "12 people are currently in orbit: 10 aboard the ISS, 2 aboard Tiangong.",
+    "source_label": "Open Notify",
+    "source_url": "http://open-notify.org/",
+}
+
+APOD_SAMPLE = {
+    "date": "2024-01-15",
+    "explanation": "A beautiful nebula.",
+    "media_type": "image",
+    "title": "Test Nebula",
+    "url": "https://example.com/image.jpg",
+}
+
+
+def _apod_ok(data=None):
+    return {
         "ok": True,
-        "data": {
-            "date": "2024-01-15",
-            "explanation": "A beautiful nebula.",
-            "media_type": "image",
-            "title": "Test Nebula",
-            "url": "https://example.com/image.jpg",
-        },
+        "data": dict(APOD_SAMPLE) if data is None else data,
         "error": None,
     }
+
+
+def _fact_ok(data=None):
+    return {
+        "ok": True,
+        "data": dict(FACT_SAMPLE) if data is None else data,
+        "error": None,
+    }
+
+
+@patch("app.routes.home.get_daily_fact")
+@patch("app.routes.home.get_apod")
+def test_home_route_success(mock_get_apod, mock_get_fact, client):
+    mock_get_apod.return_value = _apod_ok()
+    mock_get_fact.return_value = _fact_ok()
     response = client.get("/")
     assert response.status_code == 200
-    assert b"Test Nebula" in response.data
-    assert b"A beautiful nebula" in response.data
+    html = response.data.decode()
+    # IR-03: the copy comes from the live fact source, with its attribution.
+    assert "Sputnik 1" in html
+    assert "first artificial satellite" in html
+    assert 'href="https://en.wikipedia.org/wiki/Sputnik_1"' in html
+    # The media block stays data-driven on APOD.
+    assert "Test Nebula" in html
+    assert "2024-01-15" in html
 
 
+@patch("app.routes.home.get_daily_fact")
 @patch("app.routes.home.get_apod")
-def test_home_route_api_error(mock_get_apod, client):
+def test_home_route_has_no_date_picker(mock_get_apod, mock_get_fact, client):
+    """The picker is gone: / renders no date input and the route forwards no
+    date to the API, so a date parameter cannot exist on the page at all."""
+    mock_get_apod.return_value = _apod_ok()
+    mock_get_fact.return_value = _fact_ok()
+
+    response = client.get("/")
+    assert response.status_code == 200
+    assert b'name="date"' not in response.data
+    assert b'type="date"' not in response.data
+    assert b"apod_date" not in response.data
+    mock_get_apod.assert_called_once_with()
+
+
+@patch("app.routes.home.get_daily_fact")
+@patch("app.routes.home.get_apod")
+def test_home_copy_changes_with_the_source(mock_get_apod, mock_get_fact, client):
+    """IR-03 criterion 1: the copy follows the source, so a different day (or a
+    different source answering) renders different copy — never a rewrite."""
+    mock_get_apod.return_value = _apod_ok()
+
+    mock_get_fact.return_value = _fact_ok()
+    first = client.get("/").data.decode()
+    mock_get_fact.return_value = _fact_ok(dict(FACT_SAMPLE_ALT))
+    second = client.get("/").data.decode()
+
+    assert "Sputnik 1" in first
+    assert "Sputnik 1" not in second
+    assert "Humans in space right now" in second
+    assert "10 aboard the ISS" in second
+    assert 'href="http://open-notify.org/"' in second
+
+
+@patch("app.routes.home.get_daily_fact")
+@patch("app.routes.home.get_apod")
+def test_home_copy_is_omitted_when_no_source_answers(mock_get_apod, mock_get_fact, client):
+    """IR-03 criterion 2: no source answering means no copy section — not a
+    built-in substitute — while the media block still renders."""
+    mock_get_apod.return_value = _apod_ok()
+    mock_get_fact.return_value = {"ok": True, "data": None, "error": None}
+
+    response = client.get("/")
+    assert response.status_code == 200
+    html = response.data.decode()
+
+    assert "Sputnik 1" not in html
+    assert "NASA Science" not in html
+    assert "No fact available" not in html
+    assert "Test Nebula" in html
+
+
+@patch("app.routes.home.get_daily_fact")
+@patch("app.routes.home.get_apod")
+def test_home_fact_is_never_the_apod_record(mock_get_apod, mock_get_fact, client):
+    """IR-03 criterion 3: the copy is never presented as the day's APOD record."""
+    mock_get_apod.return_value = _apod_ok()
+    mock_get_fact.return_value = _fact_ok()
+
+    html = client.get("/").data.decode()
+
+    assert "A beautiful nebula" not in html
+    assert "Test Nebula" in html  # still the media caption
+
+
+@pytest.mark.parametrize(
+    "api_result,expect_error_card",
+    [
+        pytest.param(_apod_ok(), False, id="apod-success"),
+        pytest.param(
+            {"ok": False, "data": None,
+             "error": "NASA APOD API returned an error (HTTP 500)."},
+            True,
+            id="apod-http-failure",
+        ),
+        pytest.param(
+            {"ok": False, "data": None,
+             "error": "The request to NASA's APOD API timed out. Please try again."},
+            True,
+            id="apod-timeout",
+        ),
+        pytest.param(
+            {"ok": False, "data": None,
+             "error": "NASA API rate limit exceeded. Please wait and try again."},
+            True,
+            id="apod-rate-limit",
+        ),
+    ],
+)
+@patch("app.routes.home.get_daily_fact")
+@patch("app.routes.home.get_apod")
+def test_home_fact_renders_in_every_apod_state(
+        mock_get_apod, mock_get_fact, client, api_result, expect_error_card):
+    """IR-03 criterion 5: the fact section is independent of APOD's state — the
+    media block and its failure card are untouched by the copy feature."""
+    mock_get_apod.return_value = api_result
+    mock_get_fact.return_value = _fact_ok()
+
+    response = client.get("/")
+    assert response.status_code == 200
+    html = response.data.decode()
+
+    assert "first artificial satellite" in html
+    assert ("Data Unavailable" in html) is expect_error_card
+
+
+@patch("app.routes.home.get_daily_fact")
+@patch("app.routes.home.get_apod")
+def test_home_route_api_error(mock_get_apod, mock_get_fact, client):
     mock_get_apod.return_value = {
         "ok": False,
         "data": None,
         "error": "NASA API rate limit exceeded.",
     }
+    mock_get_fact.return_value = {"ok": True, "data": None, "error": None}
     response = client.get("/")
     assert response.status_code == 200
     assert b"Data Unavailable" in response.data
     assert b"rate limit" in response.data
+
+
+@patch("app.routes.home.get_daily_fact")
+@patch("app.routes.home.get_apod")
+def test_home_route_attributes_fallback_media_to_its_source(mock_get_apod, mock_get_fact, client):
+    """IR-04 criterion 4: media served by the secondary provider carries its
+    own title, credit, and source line — never attributed to APOD."""
+    mock_get_apod.return_value = {
+        "ok": True,
+        "data": {
+            "url": "https://images-api.nasa.gov/image/PIA00001~orig.jpg",
+            "media_type": "image",
+            "title": "Fallback Nebula",
+            "date": "2024-03-01",
+            "copyright": "NASA/JPL-Caltech",
+            "source": "NASA Image and Video Library",
+            "nasa_id": "PIA00001",
+        },
+        "error": None,
+    }
+    mock_get_fact.return_value = {"ok": True, "data": None, "error": None}
+    response = client.get("/")
+    assert response.status_code == 200
+    html = response.data.decode()
+    assert "Source: NASA Image and Video Library" in html
+    assert "Fallback Nebula" in html
+    assert "NASA/JPL-Caltech" in html
+
+
+@patch("app.routes.home.get_daily_fact")
+@patch("app.routes.home.get_apod")
+def test_home_route_shows_no_source_line_for_primary_media(mock_get_apod, mock_get_fact, client):
+    """Primary APOD records carry no source field, so no Source line renders
+    for them."""
+    mock_get_apod.return_value = {"ok": True, "data": dict(APOD_SAMPLE), "error": None}
+    mock_get_fact.return_value = {"ok": True, "data": None, "error": None}
+
+    html = client.get("/").data.decode()
+
+    assert "Source:" not in html
 
 
 @patch("app.routes.asteroids.get_neo_feed")
@@ -330,14 +516,16 @@ def test_planet_tonight_script_served_and_uses_verified_api(client):
         assert broken not in body, f"{broken} does not exist in astronomy-engine"
 
 
+@patch("app.routes.home.get_daily_fact")
 @patch("app.routes.home.get_apod")
-def test_home_page_declares_an_inline_favicon(mock_get_apod, client):
+def test_home_page_declares_an_inline_favicon(mock_get_apod, mock_get_fact, client):
     """A declared inline icon keeps the browser from requesting /favicon.ico,
     which otherwise 404s (the old blueprint route lived at
     /stars/favicon.ico because of its url_prefix, so it never helped)."""
     mock_get_apod.return_value = {
         "ok": False, "data": None, "error": "mocked outage"
     }
+    mock_get_fact.return_value = {"ok": True, "data": None, "error": None}
 
     response = client.get("/")
     assert response.status_code == 200
@@ -416,34 +604,122 @@ def test_planets_route_ignores_unknown_method(
 # Planet detail route
 # ---------------------------------------------------------------------------
 
+PLANET_DATA = {
+    "id": "terre",
+    "name": "Terre",
+    "nameEnglish": "Earth",
+    "isPlanet": True,
+    "massMassValue": 5.97,
+    "massExp": 24,
+    "radiusMean": 6371.0,
+    "gravity": 9.81,
+    "semimajorAxis": 149598023,
+    "eccentricity": 0.0167,
+    "inclination": 0.0,
+    "orbitalPeriod": 365.25,
+    "moons": [{"moon": "Lune"}],
+    "discoveredBy": None,
+}
+
+BODY_IMAGE = {
+    "url": "https://images-assets.nasa.gov/image/PIA00001~orig.jpg",
+    "title": "Earth from Deep Space",
+    "credit": "NASA/JPL-Caltech",
+    "nasa_id": "PIA00001",
+}
+
+
+def _image_ok(data=None):
+    return {"ok": True, "data": dict(BODY_IMAGE) if data is None else data, "error": None}
+
+
+def _image_absent():
+    return {"ok": True, "data": None, "error": None}
+
+
+@patch("app.routes.planets.get_body_image")
 @patch("app.routes.planets.get_body")
-def test_planet_detail_route_success(mock_get_body, client):
+def test_planet_detail_route_success(mock_get_body, mock_get_image, client):
     mock_get_body.return_value = {
         "ok": True,
-        "data": {
-            "id": "terre",
-            "name": "Terre",
-            "nameEnglish": "Earth",
-            "isPlanet": True,
-            "massMassValue": 5.97,
-            "massExp": 24,
-            "radiusMean": 6371.0,
-            "gravity": 9.81,
-            "semimajorAxis": 149598023,
-            "eccentricity": 0.0167,
-            "inclination": 0.0,
-            "orbitalPeriod": 365.25,
-            "moons": [{"moon": "Lune"}],
-            "discoveredBy": None,
-        },
+        "data": dict(PLANET_DATA),
         "error": None,
     }
+    mock_get_image.return_value = _image_absent()
     response = client.get("/planets/terre")
     assert response.status_code == 200
     html = response.data.decode()
     assert "Earth" in html
     assert "Physical Properties" in html
     assert "Lune" in html
+
+
+@patch("app.routes.planets.get_body_image")
+@patch("app.routes.planets.get_body")
+def test_planet_detail_renders_body_image(mock_get_body, mock_get_image, client):
+    """IR-01 criterion 1: the profile shows a NASA-sourced image of the
+    subject body, lazily loaded and constrained by CSS."""
+    mock_get_body.return_value = {"ok": True, "data": dict(PLANET_DATA), "error": None}
+    mock_get_image.return_value = _image_ok()
+
+    response = client.get("/planets/terre")
+    assert response.status_code == 200
+    html = response.data.decode()
+
+    assert 'src="https://images-assets.nasa.gov/image/PIA00001~orig.jpg"' in html
+    assert 'alt="Earth"' in html
+    assert 'loading="lazy"' in html
+    assert 'max-h-96' in html
+    assert "Earth from Deep Space" in html
+    assert "Image credit: NASA/JPL-Caltech" in html
+    assert "Physical Properties" in html
+    mock_get_image.assert_called_once_with("Earth")
+
+
+@pytest.mark.parametrize("image_result", [_image_absent(), {"ok": False, "data": None, "error": "boom"}], ids=["no-image", "provider-failure"])
+@patch("app.routes.planets.get_body_image")
+@patch("app.routes.planets.get_body")
+def test_planet_detail_without_an_image_degrades_to_stats(
+        mock_get_body, mock_get_image, client, image_result):
+    """IR-01 criterion 4: no image means the existing statistics layout, with
+    no broken image and no placeholder tile."""
+    mock_get_body.return_value = {"ok": True, "data": dict(PLANET_DATA), "error": None}
+    mock_get_image.return_value = image_result
+
+    response = client.get("/planets/terre")
+    assert response.status_code == 200
+    html = response.data.decode()
+
+    assert "images-assets.nasa.gov" not in html
+    assert 'loading="lazy"' not in html
+    assert "Physical Properties" in html
+    assert "Lune" in html
+
+
+@patch("app.routes.planets.get_body_image")
+@patch("app.routes.planets.get_body")
+def test_planet_detail_explains_builtin_data_when_live_api_is_down(
+        mock_get_body, mock_get_image, client):
+    """The OpenData API needs a key; without one the detail page still renders
+    from built-in data and says so instead of bouncing the visitor back."""
+    mock_get_body.return_value = {
+        "ok": True,
+        "data": dict(PLANET_DATA),
+        "error": None,
+        "note": (
+            "Live solar system data is unavailable (the OpenData API now needs "
+            "a free API key: Solar System OpenData API returned an error "
+            "(HTTP 401)). Showing built-in planet data."
+        ),
+    }
+    mock_get_image.return_value = _image_absent()
+
+    response = client.get("/planets/terre")
+    assert response.status_code == 200
+    html = response.data.decode()
+
+    assert "Showing built-in planet data." in html
+    assert "Physical Properties" in html
 
 
 @patch("app.routes.planets.get_body")
@@ -458,33 +734,76 @@ def test_planet_detail_route_not_found_redirects(mock_get_body, client):
 # Exoplanet detail route
 # ---------------------------------------------------------------------------
 
+EXOPLANET_DATA = {
+    "pl_name": "Kepler-22 b",
+    "hostname": "Kepler-22",
+    "discoverymethod": "Transit",
+    "disc_year": 2011,
+    "pl_orbper": 289.86,
+    "pl_orbsmax": 0.849,
+    "pl_rade": 2.38,
+    "pl_radj": 0.212,
+    "pl_bmasse": 9.1,
+    "pl_bmassj": 0.029,
+    "pl_eqt": 279.0,
+    "pl_dens": 2.4,
+    "st_spectype": "G5V",
+    "sy_snum": 1,
+    "sy_pnum": 1,
+}
+
+
+@patch("app.routes.planets.get_body_image")
 @patch("app.routes.planets.get_exoplanet")
-def test_exoplanet_detail_route_success(mock_get_exoplanet, client):
+def test_exoplanet_detail_route_success(mock_get_exoplanet, mock_get_image, client):
     mock_get_exoplanet.return_value = {
         "ok": True,
-        "data": {
-            "pl_name": "Kepler-22 b",
-            "hostname": "Kepler-22",
-            "discoverymethod": "Transit",
-            "disc_year": 2011,
-            "pl_orbper": 289.86,
-            "pl_orbsmax": 0.849,
-            "pl_rade": 2.38,
-            "pl_radj": 0.212,
-            "pl_bmasse": 9.1,
-            "pl_bmassj": 0.029,
-            "pl_eqt": 279.0,
-            "pl_dens": 2.4,
-            "st_spectype": "G5V",
-            "sy_snum": 1,
-            "sy_pnum": 1,
-        },
+        "data": dict(EXOPLANET_DATA),
         "error": None,
     }
+    mock_get_image.return_value = _image_absent()
     response = client.get("/planets/exoplanet/Kepler-22%20b")
     assert response.status_code == 200
     html = response.data.decode()
     assert "Kepler-22 b" in html
+    assert "Host Star" in html
+    assert "Kepler-22" in html
+
+
+@patch("app.routes.planets.get_body_image")
+@patch("app.routes.planets.get_exoplanet")
+def test_exoplanet_detail_renders_body_image(mock_get_exoplanet, mock_get_image, client):
+    mock_get_exoplanet.return_value = {
+        "ok": True, "data": dict(EXOPLANET_DATA), "error": None
+    }
+    mock_get_image.return_value = _image_ok()
+
+    response = client.get("/planets/exoplanet/Kepler-22%20b")
+    assert response.status_code == 200
+    html = response.data.decode()
+
+    assert 'src="https://images-assets.nasa.gov/image/PIA00001~orig.jpg"' in html
+    assert 'alt="Kepler-22 b"' in html
+    assert 'loading="lazy"' in html
+    assert "Image credit: NASA/JPL-Caltech" in html
+    assert "Host Star" in html
+
+
+@patch("app.routes.planets.get_body_image")
+@patch("app.routes.planets.get_exoplanet")
+def test_exoplanet_detail_without_an_image_degrades_to_stats(
+        mock_get_exoplanet, mock_get_image, client):
+    mock_get_exoplanet.return_value = {
+        "ok": True, "data": dict(EXOPLANET_DATA), "error": None
+    }
+    mock_get_image.return_value = _image_absent()
+
+    response = client.get("/planets/exoplanet/Kepler-22%20b")
+    assert response.status_code == 200
+    html = response.data.decode()
+
+    assert "images-assets.nasa.gov" not in html
+    assert 'loading="lazy"' not in html
     assert "Host Star" in html
     assert "Kepler-22" in html
 
@@ -500,33 +819,34 @@ def test_exoplanet_detail_route_not_found_redirects(mock_get_exoplanet, client):
 # Asteroid detail route
 # ---------------------------------------------------------------------------
 
+NEO_DATA = {
+    "id": "12345",
+    "name": "(2024 AB)",
+    "nasa_jpl_url": "https://ssd.jpl.nasa.gov/sbdb.cgi?sstr=12345",
+    "absolute_magnitude_h": 22.1,
+    "estimated_diameter": {
+        "kilometers": {
+            "estimated_diameter_min": 0.1,
+            "estimated_diameter_max": 0.3,
+        }
+    },
+    "is_potentially_hazardous_asteroid": False,
+    "close_approach_data": [
+        {
+            "close_approach_date": "2024-01-15",
+            "relative_velocity": {"kilometers_per_hour": "50000"},
+            "miss_distance": {"kilometers": "3000000"},
+            "orbiting_body": "Earth",
+        }
+    ],
+}
+
+
+@patch("app.routes.asteroids.get_body_image")
 @patch("app.routes.asteroids.get_neo")
-def test_asteroid_detail_route_success(mock_get_neo, client):
-    mock_get_neo.return_value = {
-        "ok": True,
-        "data": {
-            "id": "12345",
-            "name": "(2024 AB)",
-            "nasa_jpl_url": "https://ssd.jpl.nasa.gov/sbdb.cgi?sstr=12345",
-            "absolute_magnitude_h": 22.1,
-            "estimated_diameter": {
-                "kilometers": {
-                    "estimated_diameter_min": 0.1,
-                    "estimated_diameter_max": 0.3,
-                }
-            },
-            "is_potentially_hazardous_asteroid": False,
-            "close_approach_data": [
-                {
-                    "close_approach_date": "2024-01-15",
-                    "relative_velocity": {"kilometers_per_hour": "50000"},
-                    "miss_distance": {"kilometers": "3000000"},
-                    "orbiting_body": "Earth",
-                }
-            ],
-        },
-        "error": None,
-    }
+def test_asteroid_detail_route_success(mock_get_neo, mock_get_image, client):
+    mock_get_neo.return_value = {"ok": True, "data": dict(NEO_DATA), "error": None}
+    mock_get_image.return_value = _image_absent()
     response = client.get("/asteroids/12345")
     assert response.status_code == 200
     html = response.data.decode()
@@ -534,6 +854,38 @@ def test_asteroid_detail_route_success(mock_get_neo, client):
     assert "Close Approaches" in html
     assert "2024-01-15" in html
     assert "Earth" in html
+
+
+@patch("app.routes.asteroids.get_body_image")
+@patch("app.routes.asteroids.get_neo")
+def test_asteroid_detail_renders_body_image(mock_get_neo, mock_get_image, client):
+    mock_get_neo.return_value = {"ok": True, "data": dict(NEO_DATA), "error": None}
+    mock_get_image.return_value = _image_ok()
+
+    response = client.get("/asteroids/12345")
+    assert response.status_code == 200
+    html = response.data.decode()
+
+    assert 'src="https://images-assets.nasa.gov/image/PIA00001~orig.jpg"' in html
+    assert 'alt="(2024 AB)"' in html
+    assert 'loading="lazy"' in html
+    assert "Image credit: NASA/JPL-Caltech" in html
+    assert "Close Approaches" in html
+
+
+@patch("app.routes.asteroids.get_body_image")
+@patch("app.routes.asteroids.get_neo")
+def test_asteroid_detail_without_an_image_degrades_to_stats(mock_get_neo, mock_get_image, client):
+    mock_get_neo.return_value = {"ok": True, "data": dict(NEO_DATA), "error": None}
+    mock_get_image.return_value = _image_absent()
+
+    response = client.get("/asteroids/12345")
+    assert response.status_code == 200
+    html = response.data.decode()
+
+    assert "images-assets.nasa.gov" not in html
+    assert 'loading="lazy"' not in html
+    assert "Close Approaches" in html
 
 
 @patch("app.routes.asteroids.get_neo")
